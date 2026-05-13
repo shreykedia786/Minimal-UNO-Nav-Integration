@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ChevronRight, ChevronLeft, Lock, Zap } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Lock, Pencil, Zap } from 'lucide-react';
 import svgPaths from "../../imports/svg-eqrmta6hqq";
 import {
   RoomDateInfoIcon,
@@ -512,7 +512,9 @@ export function PropertyInventoryTable({
                   </td>
                   <td className="px-2 py-3 border-r border-[#e0e0e0] bg-white align-top">
                     <div className="flex flex-col items-start">
-                      <span className="text-[11px] font-medium text-[#666666] leading-[16.5px]">Inventory</span>
+                      <span className="text-[11px] font-medium text-[#666666] leading-[16.5px]">
+                        Inventory : <span className="tabular-nums text-[#333333]">110</span>
+                      </span>
                     </div>
                   </td>
                   {dates.map((_, idx) => (
@@ -607,12 +609,30 @@ export function PropertyInventoryTable({
                           Standard Room
                         </div>
                         <div className="truncate text-[10px] font-medium italic text-[#999999] leading-[15px]">STD</div>
+                        <div className="mt-0.5 flex min-w-0 items-center gap-1 leading-tight">
+                          <span className="min-w-0 truncate text-[10px] font-medium text-[#666666]">
+                            Min. Selling Price: <span className="font-semibold tabular-nums text-[#333333]">(€180)</span>
+                          </span>
+                          <span
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // Hook into the MSP edit flow when that screen exists.
+                            }}
+                            className="inline-flex shrink-0 cursor-pointer items-center justify-center rounded p-[1px] text-[#1565C0] transition-colors hover:bg-[#e3f2fd] hover:text-[#0f4a99]"
+                            title="Edit minimum selling price"
+                            aria-label="Edit Standard Room minimum selling price"
+                          >
+                            <Pencil className="h-[11px] w-[11px]" strokeWidth={2.2} aria-hidden />
+                          </span>
+                        </div>
                       </div>
                     </button>
                   </td>
-                  <td className="px-2 py-3 border-r border-[#e0e0e0] bg-white align-top">
+                  <td className="px-2 py-3 border-r border-[#e0e0e0] bg-white align-middle">
                     <div className="flex flex-col items-start gap-1.5">
-                      <span className="text-[11px] font-medium text-[#666666] leading-[16.5px]">Inventory</span>
+                      <span className="text-[11px] font-medium text-[#666666] leading-[16.5px]">
+                        Inventory : <span className="tabular-nums text-[#333333]">50</span>
+                      </span>
                       {navigatorIntelligenceUnlocked && (
                         <RoomViewDetailsButton
                           onClick={standardAnalysis.openDetails}
@@ -788,12 +808,30 @@ export function PropertyInventoryTable({
                           Suite
                         </div>
                         <div className="truncate text-[10px] font-medium italic text-[#666666] leading-[15px]">SUI7</div>
+                        <div className="mt-0.5 flex min-w-0 items-center gap-1 leading-tight">
+                          <span className="min-w-0 truncate text-[10px] font-medium text-[#666666]">
+                            Min. Selling Price: <span className="font-semibold tabular-nums text-[#333333]">(€320)</span>
+                          </span>
+                          <span
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // Hook into the MSP edit flow when that screen exists.
+                            }}
+                            className="inline-flex shrink-0 cursor-pointer items-center justify-center rounded p-[1px] text-[#1565C0] transition-colors hover:bg-[#e3f2fd] hover:text-[#0f4a99]"
+                            title="Edit minimum selling price"
+                            aria-label="Edit Suite minimum selling price"
+                          >
+                            <Pencil className="h-[11px] w-[11px]" strokeWidth={2.2} aria-hidden />
+                          </span>
+                        </div>
                       </div>
                     </button>
                   </td>
-                  <td className="px-2 py-3 border-r border-[#e0e0e0] align-top">
+                  <td className="px-2 py-3 border-r border-[#e0e0e0] align-middle">
                     <div className="flex flex-col items-start gap-1.5">
-                      <span className="text-[11px] font-medium text-[#666666] leading-[16.5px]">Inventory</span>
+                      <span className="text-[11px] font-medium text-[#666666] leading-[16.5px]">
+                        Inventory : <span className="tabular-nums text-[#333333]">24</span>
+                      </span>
                       {navigatorIntelligenceUnlocked && (
                         <RoomViewDetailsButton onClick={suiteAnalysis.openDetails} />
                       )}
@@ -958,12 +996,30 @@ export function PropertyInventoryTable({
                           Deluxe Room
                         </div>
                         <div className="truncate text-[10px] font-medium italic text-[#999999] leading-[15px]">DLX</div>
+                        <div className="mt-0.5 flex min-w-0 items-center gap-1 leading-tight">
+                          <span className="min-w-0 truncate text-[10px] font-medium text-[#666666]">
+                            Min. Selling Price: <span className="font-semibold tabular-nums text-[#333333]">(€240)</span>
+                          </span>
+                          <span
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // Hook into the MSP edit flow when that screen exists.
+                            }}
+                            className="inline-flex shrink-0 cursor-pointer items-center justify-center rounded p-[1px] text-[#1565C0] transition-colors hover:bg-[#e3f2fd] hover:text-[#0f4a99]"
+                            title="Edit minimum selling price"
+                            aria-label="Edit Deluxe Room minimum selling price"
+                          >
+                            <Pencil className="h-[11px] w-[11px]" strokeWidth={2.2} aria-hidden />
+                          </span>
+                        </div>
                       </div>
                     </button>
                   </td>
-                  <td className="px-2 py-3 border-r border-[#e0e0e0] bg-white align-top">
+                  <td className="px-2 py-3 border-r border-[#e0e0e0] bg-white align-middle">
                     <div className="flex flex-col items-start gap-1.5">
-                      <span className="text-[11px] font-medium text-[#666666] leading-[16.5px]">Inventory</span>
+                      <span className="text-[11px] font-medium text-[#666666] leading-[16.5px]">
+                        Inventory : <span className="tabular-nums text-[#333333]">36</span>
+                      </span>
                       {navigatorIntelligenceUnlocked && (
                         <RoomViewDetailsButton onClick={deluxeAnalysis.openDetails} />
                       )}
