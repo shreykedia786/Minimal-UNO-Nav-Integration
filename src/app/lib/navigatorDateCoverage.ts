@@ -1,5 +1,5 @@
 /**
- * Product rule: Navigator supplies competitor & parity for at most one year from the start of the
+ * Product rule: Navigator supplies competitor data for at most one year from the start of the
  * user’s selected date range. UNO Rates & Inventory can show pricing for a longer window.
  */
 export const NAVIGATOR_COVERAGE_MAX_DAYS = 365;

@@ -46,7 +46,7 @@ export function NavigatorIntelligenceLockedRow({
                       <span>
                         {navigatorUpsellContext === 'trial_expired'
                           ? 'Your trial has ended — upgrade to continue'
-                          : 'Competitor pricing & rate parity'}
+                          : 'Competitor pricing'}
                       </span>
                     </h3>
                     <span className="rounded-md bg-slate-100/90 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-500">
@@ -56,8 +56,8 @@ export function NavigatorIntelligenceLockedRow({
                   <p className="max-w-2xl text-[11px] leading-snug text-slate-500 sm:text-[12px]">
                     {navigatorUpsellContext === 'trial_expired' ? (
                       <>
-                        Your 30-day trial has ended. Upgrade to continue tracking competitor pricing and rate parity on
-                        your live dates.
+                        Your 30-day trial has ended. Upgrade to continue tracking competitor pricing on your live
+                        dates.
                       </>
                     ) : (
                       <>Hover or tap the blue dots on the chart below to preview what subscribers see.</>

@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronLeft, ChevronRight, Info, X } from 'lucide-react';
+import { ArrowUpRight, BarChart3, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Info, Sparkles, X } from 'lucide-react';
 import {
   useCallback,
   useLayoutEffect,
@@ -23,22 +23,14 @@ import { Label } from './ui/label';
 import { cn } from './ui/utils';
 import { PARITY_COLUMN_TINT, PARITY_PALETTE, PARITY_SEGMENT_PERCENT_CLASS } from '@/app/lib/parityPalette';
 import { navigatorOutsideCoverageTooltipBody } from '@/app/lib/navigatorDateCoverage';
+import { isNavigatorScrapeFailed } from '@/app/lib/navigatorScrapeStatus';
+import { RateBreakdownTooltipBody } from './RateBreakdownTooltipBody';
 
 const DEFAULT_INCLUSION_PLAN_NAMES = [
   'Advance Purchase (Non-Refundable)',
   'Best Available Rate (BAR)',
   'Member Exclusive Rate',
   'Bed & Breakfast Package'
-];
-
-const CHANNEL_OTA_OPTIONS = [
-  'Booking.com',
-  'Expedia',
-  'Agoda',
-  'Hotels.com',
-  'Priceline',
-  'Google Hotel Ads',
-  'Kayak'
 ];
 
 function strHash(s: string): number {
@@ -625,21 +617,203 @@ function ParityTooltipModernBody({
 const NAVIGATOR_LOGO_BRAND_FILTER =
   'brightness(0) saturate(100%) invert(29%) sepia(90%) saturate(6194%) hue-rotate(225deg) brightness(98%) contrast(101%)';
 
-/** Same copy as the chart tooltip (Your rate section). */
-function NavigatorYourRatesDisclaimer({ className }: { className?: string }) {
+/**
+ * Inline metadata chip surfacing the two pieces of data context (methodology +
+ * source) as a single glanceable pill. Hovering / focusing the chip reveals a
+ * popover with the detailed methodology note and the UNO-vs-Navigator caveat —
+ * progressive disclosure so the header stays calm but the rationale is always
+ * one beat away. Pattern is modelled on metadata pills in Linear / Stripe.
+ */
+function RateDataContextChip({ className }: { className?: string }) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
   return (
-    <div className={`min-w-0 ${className ?? ''}`}>
-      <div className="flex items-start gap-1.5">
+    <div
+      ref={containerRef}
+      className={`relative inline-flex ${className ?? ''}`}
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape' && open) {
+          event.stopPropagation();
+          setOpen(false);
+        }
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
+        aria-label="About this data — methodology and source"
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        className="group inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-[5px] text-[11px] font-medium leading-none text-slate-600 transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/40"
+      >
+        <span className="h-1.5 w-1.5 rounded-full bg-sky-500" aria-hidden />
+        <span>Lowest rate plan</span>
+        <span className="text-slate-300" aria-hidden>·</span>
+        <span className="text-slate-500">via</span>
+        <span className="font-semibold text-slate-700">Navigator</span>
         <Info
-          className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gray-400"
+          className="ml-0.5 h-3 w-3 text-slate-400 transition-colors group-hover:text-slate-600"
           strokeWidth={2.25}
           aria-hidden
         />
-        <p className="m-0 text-[11px] leading-snug text-gray-600">
-          Your rate here may differ from your UNO (ARI) rate, as it is sourced from{' '}
-          <span className="font-medium text-gray-800">Navigator</span>.
-        </p>
+      </button>
+
+      {/* Popover — outer wrapper holds the hover bridge so the mouse can move
+          between trigger and popover without closing it. */}
+      <div
+        className={`absolute left-0 top-full z-50 pt-2 transition-all duration-150 ${
+          open
+            ? 'pointer-events-auto opacity-100 translate-y-0'
+            : 'pointer-events-none -translate-y-1 opacity-0'
+        }`}
+        role="tooltip"
+      >
+        <div className="w-[18rem] max-w-[calc(100vw-2rem)] rounded-lg border border-slate-200 bg-white p-3 shadow-[0_8px_24px_-12px_rgba(15,23,42,0.18),0_2px_6px_-2px_rgba(15,23,42,0.06)]">
+          <div className="flex items-center gap-1.5 border-b border-slate-100 pb-2">
+            <span className="h-1.5 w-1.5 rounded-full bg-sky-500" aria-hidden />
+            <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+              About this data
+            </p>
+          </div>
+          <dl className="m-0 space-y-2 pt-2">
+            <div>
+              <dt className="m-0 text-[12px] font-semibold text-slate-800">Lowest rate plan</dt>
+              <dd className="m-0 mt-0.5 text-[11px] leading-relaxed text-slate-600">
+                All prices — yours and your competitors' — reflect the lowest publicly available rate plan for each day.
+              </dd>
+            </div>
+            <div>
+              <dt className="m-0 text-[12px] font-semibold text-slate-800">Data sourced from Navigator</dt>
+              <dd className="m-0 mt-0.5 text-[11px] leading-relaxed text-slate-600">
+                Your Rates shown here may differ from UNO (ARI), as they are independently sourced by Navigator.
+              </dd>
+            </div>
+          </dl>
+        </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Feature list shown inside the Navigator upsell info popover. Kept short and
+ * verb-led so the popover stays scannable. Mirrors the value cards in the
+ * onboarding "Access Navigator" step but adapted to the drawer context.
+ */
+const NAVIGATOR_UPSELL_BENEFITS: readonly string[] = [
+  'Track rate trends across your compset',
+  'View demand forecasts for upcoming dates',
+  'Monitor OTA rankings and visibility',
+  'Catch parity issues across channels'
+];
+
+/**
+ * Right-hand upsell cluster in the drawer's room-title row. Two affordances:
+ *  1. Subtle info icon → on hover/focus reveals a popover listing what else
+ *     the full Navigator app offers beyond this drawer's compset view.
+ *  2. Branded "Open in Navigator" CTA → primary action that hands the user
+ *     off to the full Navigator app for deeper analysis.
+ *
+ * The pair pattern keeps the chrome calm (info button is neutral) while still
+ * surfacing a clear primary action (the branded blue button).
+ */
+function NavigatorUpsellCTA({
+  onOpenNavigator
+}: {
+  /** Hook for parent to wire navigation (UNO menu open, deep link, etc). Optional during demo / preview. */
+  onOpenNavigator?: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  const handleOpenNavigator = () => {
+    if (onOpenNavigator) {
+      onOpenNavigator();
+      return;
+    }
+    // Demo fallback — keeps the click visible without throwing if no handler is wired yet.
+    // eslint-disable-next-line no-console
+    console.info('[NavigatorUpsell] Open Navigator clicked');
+  };
+
+  return (
+    <div className="ml-auto flex shrink-0 items-center gap-1.5">
+      {/* Info trigger + benefits popover */}
+      <div
+        className="relative inline-flex"
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape' && open) {
+            event.stopPropagation();
+            setOpen(false);
+          }
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setOpen(false)}
+          aria-label="Want more insights? See what else Navigator offers"
+          aria-expanded={open}
+          aria-haspopup="dialog"
+          className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[11.5px] font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus:outline-none focus-visible:bg-slate-100 focus-visible:ring-2 focus-visible:ring-[#2753eb]/40"
+        >
+          <Info className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
+          <span>Want more insights?</span>
+        </button>
+
+        {/* Popover: hover bridge (pt-2) keeps mouse travel from chip → card from closing it */}
+        <div
+          className={`absolute right-0 top-full z-50 pt-2 transition-all duration-150 ${
+            open
+              ? 'pointer-events-auto translate-y-0 opacity-100'
+              : 'pointer-events-none -translate-y-1 opacity-0'
+          }`}
+          role="tooltip"
+        >
+          <div className="w-[19rem] max-w-[calc(100vw-2rem)] rounded-lg border border-slate-200 bg-white p-3 shadow-[0_8px_24px_-12px_rgba(15,23,42,0.18),0_2px_6px_-2px_rgba(15,23,42,0.06)]">
+            <div className="flex items-center gap-1.5 border-b border-slate-100 pb-2">
+              <Sparkles className="h-3.5 w-3.5 text-[#2753eb]" strokeWidth={2.25} aria-hidden />
+              <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                With Navigator, you can:
+              </p>
+            </div>
+            <ul className="m-0 list-none space-y-1.5 p-0 pt-2">
+              {NAVIGATOR_UPSELL_BENEFITS.map((benefit) => (
+                <li
+                  key={benefit}
+                  className="flex items-start gap-2 text-[12px] leading-relaxed text-slate-700"
+                >
+                  <Check
+                    className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500"
+                    strokeWidth={2.5}
+                    aria-hidden
+                  />
+                  <span>{benefit}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      {/* Primary CTA — "Go to" framing (rather than "Open in") so it reads
+          as a directional action: this drawer is a window into Navigator;
+          clicking takes you to the full Navigator app. */}
+      <button
+        type="button"
+        onClick={handleOpenNavigator}
+        className="inline-flex items-center gap-1 rounded-md bg-[#2753eb] px-2.5 py-[7px] text-[11.5px] font-semibold text-white shadow-[0_2px_8px_-2px_rgba(39,83,235,0.45)] transition-all hover:bg-[#1d3fb8] hover:shadow-[0_4px_12px_-2px_rgba(39,83,235,0.55)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2753eb]/40 focus-visible:ring-offset-1"
+      >
+        Go to Navigator
+        <ArrowUpRight className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
+      </button>
     </div>
   );
 }
@@ -717,27 +891,36 @@ function ParityStatusLegendFooter({ className }: { className?: string }) {
   );
 }
 
+/**
+ * Per-competitor cell tooltip — used on every competitor × date cell in the drawer.
+ *
+ * Replaces the old Channel/Inclusion stack with a 3-row comparison so users can
+ * instantly see how this competitor's price sits relative to (a) their own
+ * rate and (b) the compset average. Methodology ("Lowest rate plan") is shown
+ * as a small badge so users know what they're comparing without burying it in
+ * a long footer.
+ */
 function CompetitorRateInsightCell({
   compRate,
-  inclusionPlanName,
-  channelName,
+  yourRate,
+  avgCompsetRate,
   competitorName,
   dateLabel,
   currencySymbol,
-  showTooltipRatePlanNames,
   /** When true, null rate means outside Navigator window — show em dash (not “Sold Out”). */
   navigatorUnavailableForDate = false,
+  /** When true, null rate means Navigator's scrape failed — show amber em dash. */
+  scrapeFailedForDate = false,
   children
 }: {
   compRate: number | null;
-  inclusionPlanName: string;
-  channelName: string;
+  yourRate: number;
+  avgCompsetRate: number | null;
   competitorName: string;
   dateLabel: string;
   currencySymbol: string;
-  /** Match parity tab: show inclusion plan copy only when filter is Any (lowest rateplan). */
-  showTooltipRatePlanNames: boolean;
   navigatorUnavailableForDate?: boolean;
+  scrapeFailedForDate?: boolean;
   children: ReactNode;
 }) {
   if (compRate === null) {
@@ -748,6 +931,19 @@ function CompetitorRateInsightCell({
         </NavigatorOutsideCoverageTooltip>
       );
     }
+    if (scrapeFailedForDate) {
+      // Rate isn't available for this date — render a calm "NA" placeholder
+      // (matches the Your Rates / Avg compset rows) rather than calling out
+      // the underlying scrape outcome.
+      return (
+        <span
+          className="cursor-default text-[13px] font-normal text-slate-400"
+          title="Rate not available for this date."
+        >
+          NA
+        </span>
+      );
+    }
     return <span className="text-gray-400 text-[13px]">Sold Out</span>;
   }
 
@@ -756,21 +952,100 @@ function CompetitorRateInsightCell({
       title={competitorName}
       dateLabel={dateLabel}
       visual="elevated"
-      panelWidth={300}
-      estimatedHeight={showTooltipRatePlanNames ? 200 : 150}
+      panelWidth={280}
+      estimatedHeight={200}
       triggerClassName="relative flex min-h-[1.5rem] w-full min-w-0 items-center justify-center py-0.5"
       body={
-        <ParityTooltipChannelRateColumn
-          channelRate={compRate}
+        <CompetitorCellComparisonBody
+          competitorName={competitorName}
+          competitorRate={compRate}
+          yourRate={yourRate}
+          avgCompsetRate={avgCompsetRate}
           currencySymbol={currencySymbol}
-          channelSiteLabel={channelName}
-          channelPlan={inclusionPlanName}
-          showPlans={showTooltipRatePlanNames}
         />
       }
     >
       {children}
     </InsightHoverTooltip>
+  );
+}
+
+/**
+ * Three-row scannable comparison used inside the per-competitor cell tooltip.
+ *
+ * Order (This competitor → Avg compset → Your rate) leads with the subject of
+ * the hover, follows with the market context, and lands on the user's own
+ * rate as the closing reference. The "lowest rate plan" disclosure is a
+ * deliberately quiet footnote — present enough to set expectations, soft
+ * enough that the prices remain the visual hero.
+ */
+function CompetitorCellComparisonBody({
+  competitorName,
+  competitorRate,
+  yourRate,
+  avgCompsetRate,
+  currencySymbol
+}: {
+  competitorName: string;
+  competitorRate: number;
+  yourRate: number;
+  avgCompsetRate: number | null;
+  currencySymbol: string;
+}) {
+  return (
+    <div className="space-y-2">
+      {/* Three equal-weight rate rows — identical row structure so prices
+          stack into a clean column the eye can scan in one sweep. */}
+      <div className="divide-y divide-slate-100">
+        <CompetitorCellRateRow
+          dotColor="bg-indigo-500"
+          label={competitorName}
+          value={`${currencySymbol}${competitorRate}`}
+        />
+        <CompetitorCellRateRow
+          dotColor="bg-slate-400"
+          label="Avg. compset rate"
+          value={avgCompsetRate !== null ? `${currencySymbol}${avgCompsetRate}` : '—'}
+        />
+        <CompetitorCellRateRow
+          dotColor="bg-sky-500"
+          label="Your rate"
+          value={`${currencySymbol}${yourRate}`}
+        />
+      </div>
+
+      {/* Methodology footnote — kept intentionally subtle so users are aware
+          that all three values are "lowest rate plan" without it competing
+          with the prices for attention. */}
+      <p className="m-0 flex items-center gap-1 border-t border-slate-100 pt-1.5 text-[10px] font-normal leading-none text-slate-400">
+        <Info aria-hidden className="h-2.5 w-2.5 shrink-0" strokeWidth={2} />
+        Showing lowest rate plan
+      </p>
+    </div>
+  );
+}
+
+function CompetitorCellRateRow({
+  dotColor,
+  label,
+  value
+}: {
+  dotColor: string;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-1.5">
+      <div className="flex min-w-0 items-center gap-2">
+        <span aria-hidden className={cn('h-1.5 w-1.5 shrink-0 rounded-full', dotColor)} />
+        <span className="truncate text-[11.5px] font-medium text-slate-700" title={label}>
+          {label}
+        </span>
+      </div>
+      <span className="text-[14px] font-bold leading-none tabular-nums tracking-tight text-slate-900">
+        {value}
+      </span>
+    </div>
   );
 }
 
@@ -1130,37 +1405,20 @@ export function DetailedCompetitorModal({
   const currencySymbol = rateCurrency.symbol;
 
   const [dateOffset, setDateOffset] = useState(0);
-  const [activeTab, setActiveTab] = useState<'competitor' | 'parity'>('competitor');
   const [isClosing, setIsClosing] = useState(false);
   const [inclusionFilter, setInclusionFilter] = useState('any');
   const [channelFilter, setChannelFilter] = useState('any');
   const [compsetSelection, setCompsetSelection] = useState(() => initialCompsetSelection(competitors.length));
+  /**
+   * Deeper-analysis rows (avg compset rates + per-competitor table) are gated
+   * behind an explicit CTA so the drawer's initial paint stays light. The
+   * per-competitor table renders a CompetitorRateInsightCell + tooltip per cell
+   * (≈ compsets × visible dates) which dominates the first-paint cost when
+   * always-on. The avg row depends on the same data, so they reveal together.
+   */
+  const [showCompetitorRates, setShowCompetitorRates] = useState(false);
 
   const inclusionPlans = inclusionPlanNames?.length ? inclusionPlanNames : DEFAULT_INCLUSION_PLAN_NAMES;
-
-  const ratePlanSelectControl = useMemo(
-    () => (
-      <Select value={inclusionFilter} onValueChange={setInclusionFilter}>
-        <SelectTrigger
-          size="sm"
-          className="h-8 w-[min(220px,42vw)] max-w-[260px] text-[12px] font-semibold text-[#333333] bg-white border-[#d0d0d0]"
-        >
-          <SelectValue placeholder="Any (Lowest Rateplan)" />
-        </SelectTrigger>
-        <SelectContent className="z-[10050]">
-          <SelectItem value="any" className="text-[12px]">
-            Any (Lowest Rateplan)
-          </SelectItem>
-          {inclusionPlans.map((name) => (
-            <SelectItem key={name} value={name} className="text-[12px]">
-              {name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    ),
-    [inclusionFilter, inclusionPlans]
-  );
 
   /** Tooltip: rate plan driving the subscriber value (specific plan, or simulated cheapest when filter is Any). */
   const resolveTooltipInclusionPlan = useCallback(
@@ -1173,16 +1431,6 @@ export function DetailedCompetitorModal({
     [inclusionFilter, inclusionPlans]
   );
 
-  /** Tooltip: channel where the subscriber rate is cheapest (specific OTA when filtered, else simulated per compset/day). */
-  const resolveTooltipChannel = useCallback(
-    (compIdx: number, globalDateIdx: number) => {
-      if (channelFilter !== 'any') return channelFilter;
-      const i = (compIdx * 31 + globalDateIdx * 17 + 3) % CHANNEL_OTA_OPTIONS.length;
-      return CHANNEL_OTA_OPTIONS[i];
-    },
-    [channelFilter]
-  );
-
   const handleClose = () => {
     setIsClosing(true);
     setTimeout(() => {
@@ -1190,16 +1438,15 @@ export function DetailedCompetitorModal({
     }, 300); // Match animation duration
   };
 
-  // Number of dates to show at once - 7 for parity, 10 for competitor
-  const DATES_TO_SHOW = activeTab === 'parity' ? 7 : 10;
+  /** Number of dates visible in the competitor table at once. */
+  const DATES_TO_SHOW = 10;
 
   useLayoutEffect(() => {
     if (navigatorUnavailableFromIndex == null) return;
-    const show = activeTab === 'parity' ? 7 : 10;
     setDateOffset(
-      initialDrawerOffsetStraddlingNavigatorLimit(dates.length, navigatorUnavailableFromIndex, show)
+      initialDrawerOffsetStraddlingNavigatorLimit(dates.length, navigatorUnavailableFromIndex, DATES_TO_SHOW)
     );
-  }, [navigatorUnavailableFromIndex, dates.length, activeTab]);
+  }, [navigatorUnavailableFromIndex, dates.length]);
 
   // Calculate visible data based on offset
   const visibleDates = dates.slice(dateOffset, dateOffset + DATES_TO_SHOW);
@@ -1233,6 +1480,13 @@ export function DetailedCompetitorModal({
       if (navigatorUnavailableFromIndex != null && dateIndex >= navigatorUnavailableFromIndex) {
         return null;
       }
+      // Navigator's scrape failed for this date — no rates to surface.
+      // Downstream renderers distinguish "scrape failed" from "sold out" by
+      // checking `isNavigatorScrapeFailed` again at the cell level so the
+      // empty-state copy can be tailored.
+      if (isNavigatorScrapeFailed(dateIndex)) {
+        return null;
+      }
       const seed = competitorIndex * 1000 + dateIndex;
       const dateData = chartData[dateIndex];
       if (!dateData) return null;
@@ -1244,8 +1498,7 @@ export function DetailedCompetitorModal({
       const range = maxRate - minRate;
       const variance = (seed % 97) / 97;
 
-      // Parity tab has no channel filter — always use broad (cheapest-channel-style) demo rates.
-      const channelKey = activeTab === 'parity' ? 'any' : channelFilter;
+      const channelKey = channelFilter;
       const broadView = inclusionFilter === 'any' && channelKey === 'any';
       const t = broadView ? variance * 0.42 : variance;
       let rate = Math.round(minRate + range * t);
@@ -1259,24 +1512,7 @@ export function DetailedCompetitorModal({
 
       return rate;
     },
-    [chartData, inclusionFilter, channelFilter, activeTab, navigatorUnavailableFromIndex]
-  );
-
-  /** Rate plan driving the simulated channel rate for a parity matrix cell. */
-  const resolveParityCellRatePlan = useCallback(
-    (channelIdx: number, globalDateIdx: number) => {
-      if (inclusionFilter !== 'any') return inclusionFilter;
-      if (inclusionPlans.length === 0) return DEFAULT_INCLUSION_PLAN_NAMES[0];
-      const i = (channelIdx * 19 + globalDateIdx * 13 + 7) % inclusionPlans.length;
-      return inclusionPlans[i];
-    },
-    [inclusionFilter, inclusionPlans]
-  );
-
-  /** Same inclusion name as competitor “Your Rates” row tooltips (plan list + per-stay-date when Any). */
-  const resolveParityYourRatePlan = useCallback(
-    (globalDateIdx: number) => resolveTooltipInclusionPlan(0, globalDateIdx),
-    [resolveTooltipInclusionPlan]
+    [chartData, inclusionFilter, channelFilter, navigatorUnavailableFromIndex]
   );
 
   const competitorRatesMatrix = useMemo(() => {
@@ -1382,102 +1618,39 @@ export function DetailedCompetitorModal({
             <X className="w-5 h-5" />
           </button>
 
-          {/* Tabs — pr matches close control inset; currency label disambiguates $ etc. */}
+          {/* Drawer header — single-view since Parity Analysis was retired.
+              Currency indicator was moved down to the room-title row so it can
+              sit beside the data-context chip as related metadata. */}
           <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-6 pt-4 pr-14">
-            <div className="flex min-w-0 gap-6 sm:gap-8">
-              <button
-                onClick={() => {
-                  setActiveTab('competitor');
-                  setDateOffset(0);
-                }}
-                className={`shrink-0 pb-3 pt-3 text-[14px] font-medium transition-colors border-b-2 ${
-                  activeTab === 'competitor'
-                    ? 'text-[#2196F3] border-[#2196F3]'
-                    : 'text-[#666666] border-transparent hover:text-[#333333]'
-                }`}
-              >
-                Competitor Rate Analysis
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTab('parity');
-                  setDateOffset(0);
-                }}
-                className={`shrink-0 pb-3 pt-3 text-[14px] font-medium transition-colors border-b-2 ${
-                  activeTab === 'parity'
-                    ? 'text-[#2196F3] border-[#2196F3]'
-                    : 'text-[#666666] border-transparent hover:text-[#333333]'
-                }`}
-              >
-                Parity Analysis
-              </button>
-            </div>
-            <p
-              className="m-0 max-w-[min(100%,28rem)] shrink-0 text-right text-[11px] leading-snug text-[#666666]"
-              title={`All rates in this view are in ${rateCurrency.displayName} (${rateCurrency.code}).`}
-            >
-              <span className="sr-only">Currency: </span>
-              <span className="font-semibold text-[#333333]">{rateCurrency.displayName}</span>
-              <span className="tabular-nums"> ({rateCurrency.code})</span>
-              <span className="text-[#888888]"> · rates below</span>
-            </p>
+            <h2 className="m-0 shrink-0 text-[14px] font-semibold leading-tight text-[#333333] pb-3 pt-3">
+              Competitor Rate Analysis
+            </h2>
           </div>
 
-          {/* Room name + filters — same layout rules on both tabs so title and controls stay aligned */}
+          {/* Room name + inline data-context chip + currency indicator + Navigator
+              upsell CTA on the same row. Data-context chip and currency are
+              grouped as related metadata (separated by a pipe rule); the upsell
+              cluster pushes right via ml-auto inside NavigatorUpsellCTA. */}
           <div className="px-6 py-3 border-t border-gray-200">
-            <div className="flex min-w-0 flex-wrap items-start justify-between gap-x-4 gap-y-3">
-              <div className="flex min-w-0 basis-full flex-col gap-1.5 pr-0 sm:basis-0 sm:flex-1 sm:pr-4">
-                <h2 className="m-0 text-[16px] font-semibold leading-tight text-[#333333]">
-                  {roomType}
-                </h2>
-                <NavigatorYourRatesDisclaimer />
+            <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5">
+              <h2 className="m-0 min-w-0 text-[16px] font-semibold leading-tight text-[#333333]">
+                {roomType}
+              </h2>
+              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                <RateDataContextChip />
+                {/* Pipe rule — quiet visual separator between two related pieces of metadata. */}
+                <span aria-hidden className="h-3.5 w-px shrink-0 bg-slate-300/80" />
+                <p
+                  className="m-0 text-[11px] leading-snug text-[#666666]"
+                  title={`All rates in this view are in ${rateCurrency.displayName} (${rateCurrency.code}).`}
+                >
+                  <span className="sr-only">Currency: </span>
+                  <span className="font-semibold text-[#333333]">{rateCurrency.displayName}</span>
+                  <span className="tabular-nums"> ({rateCurrency.code})</span>
+                  <span className="text-[#888888]"> · rates below</span>
+                </p>
               </div>
-              <div className="flex min-w-0 basis-full flex-wrap items-start justify-end gap-x-4 gap-y-2 sm:basis-auto sm:justify-end">
-                {activeTab === 'competitor' && (
-                  <div className="flex min-w-0 flex-col gap-0.5">
-                    <span className="text-[10px] font-medium text-[#666666] uppercase tracking-wide">Inclusion</span>
-                    {ratePlanSelectControl}
-                  </div>
-                )}
-                {activeTab === 'competitor' && (
-                  <div className="flex min-w-0 flex-col gap-0.5">
-                    <span className="text-[10px] font-medium text-[#666666] uppercase tracking-wide">Channels</span>
-                    <Select value={channelFilter} onValueChange={setChannelFilter}>
-                      <SelectTrigger
-                        size="sm"
-                        className="h-8 w-[min(220px,42vw)] max-w-[260px] text-[12px] font-semibold text-[#333333] bg-white border-[#d0d0d0]"
-                      >
-                        <SelectValue placeholder="Any (Cheapest Channel)" />
-                      </SelectTrigger>
-                      <SelectContent className="z-[10050]">
-                        <SelectItem value="any" className="text-[12px]">
-                          Any (Cheapest Channel)
-                        </SelectItem>
-                        {CHANNEL_OTA_OPTIONS.map((name) => (
-                          <SelectItem key={name} value={name} className="text-[12px]">
-                            {name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-                {activeTab === 'competitor' && (
-                  <div className="flex min-w-0 flex-col gap-0.5">
-                    <span className="text-[10px] font-medium text-[#666666] uppercase tracking-wide">
-                      Compsets
-                    </span>
-                    <CompsetPickerDropdown
-                      competitors={competitors}
-                      compsetSelection={compsetSelection}
-                      toggleCompset={toggleCompset}
-                      selectedCompsetCount={selectedCompsetCount}
-                      selectAllCompsets={selectAllCompsets}
-                      resetCompsetsToFirstOnly={resetCompsetsToFirstOnly}
-                    />
-                  </div>
-                )}
-              </div>
+              <NavigatorUpsellCTA />
             </div>
           </div>
         </div>
@@ -1485,9 +1658,8 @@ export function DetailedCompetitorModal({
         {/* Content — date window prev/next live in first/last date header cells so layout is resolution-safe */}
         <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
           {/* Competitor Rate Analysis: dates / your rates / chart / avg stay fixed; compset rows scroll vertically */}
-          {activeTab === 'competitor' && (
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-              <div className="flex min-h-0 flex-1 flex-col overflow-x-auto">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="flex min-h-0 flex-1 flex-col overflow-x-auto">
                 <div className="shrink-0 bg-white">
                   <table
                     className="w-full border-collapse"
@@ -1574,6 +1746,10 @@ export function DetailedCompetitorModal({
                   const soldOut = rate === 0 || !rate;
                   const navOut =
                     navigatorUnavailableFromIndex != null && globalIdx >= navigatorUnavailableFromIndex;
+                  // Navigator-sourced "Your Rate" is also affected when the
+                  // scrape returned no data; render as a calm "NA" instead of
+                  // calling out the system limitation.
+                  const scrapeFailedHere = !navOut && isNavigatorScrapeFailed(globalIdx);
 
                   return (
                     <td
@@ -1584,53 +1760,30 @@ export function DetailedCompetitorModal({
                       )}
                     >
                       {navOut ? (
-                        <YourRatesRowTooltipCell
-                          roomTitle={roomType}
-                          dateLabel={
-                            visibleDates[idx] ? formatInsightDate(visibleDates[idx]) : ''
-                          }
-                          yourRate={rate}
-                          soldOut={false}
-                          inclusionPlanName={resolveTooltipInclusionPlan(0, globalIdx)}
-                          currencySymbol={currencySymbol}
-                          elevatedTooltip
-                          showTooltipRatePlanNames={inclusionFilter === 'any'}
-                          navigatorNoData
-                        >
+                        <span className="cursor-default text-[13px] font-normal text-slate-500">
                           —
-                        </YourRatesRowTooltipCell>
+                        </span>
+                      ) : scrapeFailedHere ? (
+                        <span className="cursor-default text-[13px] font-normal text-slate-400">
+                          NA
+                        </span>
+                      ) : editableYourRates && onYourRateChange ? (
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete="off"
+                          aria-label={`Your rate ${visibleDates[idx]?.day} ${visibleDates[idx]?.date} ${visibleDates[idx]?.month}`}
+                          value={rate === 0 ? '' : String(rate)}
+                          onChange={(e) => onYourRateChange(globalIdx, e.target.value)}
+                          className="mx-auto block w-[3.25rem] h-7 text-center text-[11px] border border-[#d0d0d0] rounded-full bg-white tabular-nums font-semibold text-[#333333]"
+                        />
+                      ) : soldOut ? (
+                        <span className="text-gray-400 font-normal">Sold Out</span>
                       ) : (
-                        <YourRatesRowTooltipCell
-                          roomTitle={roomType}
-                          dateLabel={
-                            visibleDates[idx] ? formatInsightDate(visibleDates[idx]) : ''
-                          }
-                          yourRate={rate}
-                          soldOut={soldOut}
-                          inclusionPlanName={resolveTooltipInclusionPlan(0, globalIdx)}
-                          currencySymbol={currencySymbol}
-                          elevatedTooltip
-                          showTooltipRatePlanNames={inclusionFilter === 'any'}
-                        >
-                          {editableYourRates && onYourRateChange ? (
-                            <input
-                              type="text"
-                              inputMode="numeric"
-                              autoComplete="off"
-                              aria-label={`Your rate ${visibleDates[idx]?.day} ${visibleDates[idx]?.date} ${visibleDates[idx]?.month}`}
-                              value={rate === 0 ? '' : String(rate)}
-                              onChange={(e) => onYourRateChange(globalIdx, e.target.value)}
-                              className="mx-auto block w-[3.25rem] h-7 text-center text-[11px] border border-[#d0d0d0] rounded-full bg-white tabular-nums font-semibold text-[#333333]"
-                            />
-                          ) : soldOut ? (
-                            <span className="text-gray-400 font-normal">Sold Out</span>
-                          ) : (
-                            <span className="text-[#333333]">
-                              {currencySymbol}
-                              {rate}
-                            </span>
-                          )}
-                        </YourRatesRowTooltipCell>
+                        <span className="text-[#333333]">
+                          {currencySymbol}
+                          {rate}
+                        </span>
                       )}
                     </td>
                   );
@@ -1682,6 +1835,11 @@ export function DetailedCompetitorModal({
                   const prevMyRateY = prevData ? valueToY(prevData.rate) : null;
                   const nextMyRateY = nextData ? valueToY(nextData.rate) : null;
 
+                  const scrapeFailedHere = !navUnavail && isNavigatorScrapeFailed(globalIdx);
+                  // Scrape-failed neighbours act as chart discontinuities so we
+                  // don't draw a trend line into an empty amber tile.
+                  const prevScrapeFailed = isNavigatorScrapeFailed(globalIdx - 1);
+                  const nextScrapeFailed = isNavigatorScrapeFailed(globalIdx + 1);
                   return (
                     <td key={idx} className="px-0 py-2 border-r border-[#e0e0e0] bg-white relative align-middle w-full overflow-visible">
                       <div className="flex items-center justify-center w-full pt-1 pb-2">
@@ -1696,14 +1854,23 @@ export function DetailedCompetitorModal({
                           prevMyRateY={prevMyRateY}
                           nextMyRateY={nextMyRateY}
                           hasPrev={
-                            !!prevData && !isNavUnavailableAt(globalIdx) && !isNavUnavailableAt(globalIdx - 1)
+                            !!prevData &&
+                            !isNavUnavailableAt(globalIdx) &&
+                            !isNavUnavailableAt(globalIdx - 1) &&
+                            !scrapeFailedHere &&
+                            !prevScrapeFailed
                           }
                           hasNext={
-                            !!nextData && !isNavUnavailableAt(globalIdx) && !isNavUnavailableAt(globalIdx + 1)
+                            !!nextData &&
+                            !isNavUnavailableAt(globalIdx) &&
+                            !isNavUnavailableAt(globalIdx + 1) &&
+                            !scrapeFailedHere &&
+                            !nextScrapeFailed
                           }
                           hasEvent={hasEvent(idx)}
                           currencySymbol={currencySymbol}
                           navigatorUnavailable={navUnavail}
+                          scrapeFailed={scrapeFailedHere}
                         />
                       </div>
                     </td>
@@ -1711,16 +1878,31 @@ export function DetailedCompetitorModal({
                 })}
                       </tr>
 
-                      {/* Average competitor rates — selected compsets only */}
+                      {/* Average competitor rates — selected compsets only. Gated
+                          behind the "View competitor rates" CTA along with the
+                          per-competitor table below for first-paint performance. */}
+                      {showCompetitorRates && (
                       <tr className="border-b-2 border-[#d4d8de] bg-[#e2e5ea]">
                         <td className="sticky left-0 z-10 border-r border-[#d4d8de] bg-[#e2e5ea] px-4 py-3 text-[13px] font-semibold text-[#333333]">
-                          Avg. Compset Rates
+                          <div className="flex items-center justify-between gap-2">
+                            <span>Avg. Compset Rates</span>
+                            <button
+                              type="button"
+                              onClick={() => setShowCompetitorRates(false)}
+                              className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-slate-600 transition-colors hover:border-slate-400 hover:text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2753eb]/40"
+                              aria-label="Hide competitor rates"
+                            >
+                              <ChevronUp className="h-3 w-3" strokeWidth={2.5} aria-hidden />
+                              Hide
+                            </button>
+                          </div>
                         </td>
                         {visibleRates.map((_myRate, dateIdx) => {
                           const avgRate = avgCompsetPerDate[dateIdx];
                           const g = dateOffset + dateIdx;
                           const navOut =
                             navigatorUnavailableFromIndex != null && g >= navigatorUnavailableFromIndex;
+                          const scrapeFailedHere = !navOut && isNavigatorScrapeFailed(g);
                           const avgDateLabel = visibleDates[dateIdx]
                             ? formatInsightDate(visibleDates[dateIdx])
                             : '';
@@ -1740,6 +1922,10 @@ export function DetailedCompetitorModal({
                                       —
                                     </span>
                                   </NavigatorOutsideCoverageTooltip>
+                                ) : scrapeFailedHere ? (
+                                  <span className="cursor-default text-[13px] font-normal text-slate-400">
+                                    NA
+                                  </span>
                                 ) : (
                                   <span className="text-[13px] font-normal text-slate-500">—</span>
                                 )
@@ -1753,10 +1939,12 @@ export function DetailedCompetitorModal({
                           );
                         })}
                       </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
 
+                {showCompetitorRates ? (
                 <div className="min-h-0 flex-1 overflow-y-auto border-t border-[#e8eaed] bg-white">
                   <table
                     className="w-full border-collapse"
@@ -1777,12 +1965,13 @@ export function DetailedCompetitorModal({
                             <td className="sticky left-0 z-20 border-r border-[#e0e0e0] bg-white px-4 py-3 text-[13px] text-[#333333] hover:bg-gray-50">
                               {competitor.name}
                             </td>
-                            {visibleRates.map((_myRate, dateIdx) => {
+                            {visibleRates.map((myRate, dateIdx) => {
                               const compRate = competitorRatesMatrix[dateIdx][compIdx];
                               const actualMinMax = actualMinMaxPerDate[dateIdx];
                               const g = dateOffset + dateIdx;
                               const navUnavail =
                                 navigatorUnavailableFromIndex != null && g >= navigatorUnavailableFromIndex;
+                              const scrapeFailedHere = !navUnavail && isNavigatorScrapeFailed(g);
                               const isMaxRate =
                                 compRate !== null &&
                                 actualMinMax.max !== null &&
@@ -1799,11 +1988,8 @@ export function DetailedCompetitorModal({
                                 >
                                   <CompetitorRateInsightCell
                                     compRate={compRate}
-                                    inclusionPlanName={resolveTooltipInclusionPlan(
-                                      compIdx,
-                                      dateOffset + dateIdx
-                                    )}
-                                    channelName={resolveTooltipChannel(compIdx, dateOffset + dateIdx)}
+                                    yourRate={myRate}
+                                    avgCompsetRate={avgCompsetPerDate[dateIdx]}
                                     competitorName={competitor.name}
                                     dateLabel={
                                       visibleDates[dateIdx]
@@ -1811,8 +1997,8 @@ export function DetailedCompetitorModal({
                                         : ''
                                     }
                                     currencySymbol={currencySymbol}
-                                    showTooltipRatePlanNames={inclusionFilter === 'any'}
                                     navigatorUnavailableForDate={navUnavail}
+                                    scrapeFailedForDate={scrapeFailedHere}
                                   >
                                     {compRate === null ? null : isMaxRate ? (
                                       <span className="text-[14px] font-bold text-[#f44336]">
@@ -1840,39 +2026,47 @@ export function DetailedCompetitorModal({
                     </tbody>
                   </table>
                 </div>
+                ) : (
+                  /**
+                   * Default state: per-competitor table + avg row hidden behind
+                   * this CTA so the drawer first-paints with just date/your-rates.
+                   * Anchored near the top of its flex region (right under the
+                   * Your-rates row) instead of vertically centered, so the user
+                   * doesn't have to scan past empty space to find the action.
+                   */
+                  <div className="flex min-h-0 flex-1 flex-col items-center justify-start gap-2.5 border-t border-[#e8eaed] bg-gradient-to-br from-slate-50/80 via-white to-blue-50/40 px-6 pt-6 pb-10">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-[#2753eb] shadow-[0_4px_10px_-4px_rgba(39,83,235,0.25)] ring-1 ring-blue-100">
+                      <BarChart3 className="h-5 w-5" strokeWidth={2} aria-hidden />
+                    </div>
+                    <div className="max-w-md text-center">
+                      <h3 className="m-0 text-[14px] font-semibold leading-tight text-slate-900">
+                        See detailed competitor pricing
+                      </h3>
+                      <p className="mt-1 m-0 text-[12px] leading-relaxed text-slate-500">
+                        You're currently viewing the market range. Open the detailed view to see individual competitor prices for each date.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowCompetitorRates(true)}
+                      className="mt-1 inline-flex items-center gap-2 rounded-lg bg-[#2753eb] px-4 py-2.5 text-[13px] font-semibold text-white shadow-[0_4px_12px_-2px_rgba(39,83,235,0.45)] transition-all hover:bg-[#1d3fb8] hover:shadow-[0_6px_16px_-2px_rgba(39,83,235,0.55)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2753eb]/40 focus-visible:ring-offset-2"
+                    >
+                      <BarChart3 className="h-4 w-4" strokeWidth={2.5} aria-hidden />
+                      View detailed competitor rates
+                    </button>
+                    <p className="m-0 text-[10px] font-medium text-slate-400">
+                      Loads compset data on demand to keep the drawer fast.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
-          )}
+          </div>{/* /relative content wrapper */}
 
-          {/* Parity Analysis Tab Content */}
-          {activeTab === 'parity' && (
-            <ParityAnalysisContent
-              visibleDates={visibleDates}
-              visibleRates={visibleRates}
-              dateOffset={dateOffset}
-              roomType={roomType}
-              getCompetitorRateForDate={getCompetitorRateForDate}
-              resolveParityCellRatePlan={resolveParityCellRatePlan}
-              resolveParityYourRatePlan={resolveParityYourRatePlan}
-              showTooltipRatePlanNames={inclusionFilter === 'any'}
-              rateCurrency={rateCurrency}
-              onDateNavigatePrevious={handlePrevious}
-              onDateNavigateNext={handleNext}
-              canNavigatePrevious={canGoPrevious}
-              canNavigateNext={canGoNext}
-              navigatorUnavailableFromIndex={navigatorUnavailableFromIndex}
-            />
-          )}
-        </div>
-
-        {/* Legend (parity only) + Navigator branding — both tabs align to the right for consistency */}
+        {/* Footer — Navigator branding (parity legend retired with the Parity tab). */}
         <footer className="shrink-0 border-t border-gray-200 bg-white px-6 py-3 flex flex-wrap items-center justify-end gap-x-6 gap-y-2">
-          {activeTab === 'parity' && <ParityStatusLegendFooter />}
           <div
-            className={cn(
-              'flex items-center gap-1 shrink-0',
-              activeTab === 'parity' && 'border-l border-gray-200 pl-6'
-            )}
+            className="flex items-center gap-1 shrink-0"
             aria-label="Powered by Navigator"
           >
             <span className="shrink-0 text-[10px] font-medium leading-none text-slate-400/85">
@@ -2704,7 +2898,8 @@ function ChartCell({
   hasNext,
   hasEvent,
   currencySymbol,
-  navigatorUnavailable = false
+  navigatorUnavailable = false,
+  scrapeFailed = false
 }: {
   date: { day: string; date: string; month: string };
   myRate: number;
@@ -2720,9 +2915,62 @@ function ChartCell({
   hasEvent: boolean;
   currencySymbol: string;
   navigatorUnavailable?: boolean;
+  /** Navigator's independent scrape returned no rates for this date. */
+  scrapeFailed?: boolean;
 }) {
   const [isHovered, setIsHovered] = useState(false);
   const chartHeight = 112;
+  /** Trigger + tooltip refs power the portalled positioning below. */
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const tipRef = useRef<HTMLDivElement>(null);
+  const [layout, setLayout] = useState<{ left: number; top: number; placement: 'above' | 'below' } | null>(null);
+
+  /**
+   * Portal-based positioning (mirrors `RoomDateInfoIcon`). Without this the
+   * tooltip was clipped by the drawer's scrollable region — the chart cells
+   * live inside an `overflow: hidden / auto` flex container. Rendering the
+   * tooltip to `document.body` lets it escape every ancestor clip + stacking
+   * context, and the manual placement keeps it snug to the chart cell.
+   */
+  useLayoutEffect(() => {
+    if (!isHovered) {
+      setLayout(null);
+      return;
+    }
+    const update = () => {
+      const trigger = triggerRef.current;
+      const tip = tipRef.current;
+      if (!trigger || !tip) return;
+      const r = trigger.getBoundingClientRect();
+      const tw = tip.offsetWidth;
+      const th = tip.offsetHeight;
+      const viewportMargin = 8;
+      /** Vertical distance from the chart cell — tight so the tail "kisses" the chart. */
+      const gap = 4;
+      let left = r.left + r.width / 2 - tw / 2;
+      left = Math.min(Math.max(left, viewportMargin), window.innerWidth - tw - viewportMargin);
+      let top = r.top - th - gap;
+      let placement: 'above' | 'below' = 'above';
+      if (top < viewportMargin) {
+        placement = 'below';
+        top = r.bottom + gap;
+        if (top + th > window.innerHeight - viewportMargin) {
+          top = Math.max(viewportMargin, window.innerHeight - th - viewportMargin);
+        }
+      }
+      setLayout({ left, top, placement });
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    if (tipRef.current) ro.observe(tipRef.current);
+    window.addEventListener('scroll', update, true);
+    window.addEventListener('resize', update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('scroll', update, true);
+      window.removeEventListener('resize', update);
+    };
+  }, [isHovered]);
 
   if (navigatorUnavailable) {
     return (
@@ -2743,49 +2991,90 @@ function ChartCell({
     );
   }
 
+  if (scrapeFailed) {
+    /**
+     * No system-blame framing — the user shouldn't feel like Navigator broke.
+     * No border either: the column borders + row padding already define the
+     * cell, so a muted centered label reads as a benign empty state without
+     * looking like a "broken" tile.
+     */
+    return (
+      <div className="relative w-full" title="Rates are not available for this date.">
+        <div
+          className="flex w-full items-center justify-center px-1 py-2 text-center"
+          style={{ minHeight: chartHeight }}
+        >
+          <span className="text-[10px] font-medium leading-tight text-slate-400">Not Available</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
+      ref={triggerRef}
       className="relative w-full"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Competitor-only tooltip (no parity — Parity lives on the other tab) */}
-      {isHovered && (
-        <div className="absolute bottom-full left-1/2 z-[100] -mb-2 -translate-x-1/2 pointer-events-none">
-          <div className="rounded-lg bg-[#1a1d2e] px-3 py-2 text-[10px] whitespace-nowrap text-white shadow-xl">
-            <div className="mb-1.5 border-b border-gray-700 pb-1.5 font-semibold">
-              {date.day}, {date.date} {date.month}
-            </div>
-            <div className="space-y-1">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-gray-400">My Rate:</span>
-                <span className="font-semibold text-[#60a5fa]">
-                  {currencySymbol}
-                  {myRate}
-                </span>
+      {/* Per-cell rate breakdown tooltip — portalled to body and absolutely
+          positioned so the drawer's scroll/overflow can't clip it. Uses the
+          shared body so this stays pixel-consistent with the main-screen
+          RoomDateInfoIcon tooltip. */}
+      {isHovered && typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            ref={tipRef}
+            role="tooltip"
+            className="pointer-events-none relative w-[260px] rounded-2xl border border-slate-200/80 bg-white px-3.5 py-3 text-left text-slate-900 shadow-[0_20px_50px_-16px_rgba(15,23,42,0.28)] ring-1 ring-slate-950/[0.04]"
+            style={
+              layout
+                ? { position: 'fixed', left: layout.left, top: layout.top, zIndex: 2147483000 }
+                : { position: 'fixed', left: -9999, top: 0, zIndex: 2147483000, visibility: 'hidden' }
+            }
+          >
+            {/* Pointer tail above when tooltip is placed below the cell */}
+            {layout?.placement === 'below' && (
+              <div className="pointer-events-none absolute bottom-full left-1/2 z-[1] mb-0 -translate-x-1/2">
+                <div className="relative">
+                  <div
+                    aria-hidden
+                    className="h-0 w-0 border-b-[8px] border-l-[7px] border-r-[7px] border-b-[rgb(226_232_240/0.85)] border-l-transparent border-r-transparent"
+                  />
+                  <div
+                    aria-hidden
+                    className="absolute left-1/2 top-px h-0 w-0 -translate-x-1/2 border-b-[7px] border-l-[6px] border-r-[6px] border-b-white border-l-transparent border-r-transparent"
+                  />
+                </div>
               </div>
-              <div className="my-1.5 h-px bg-gray-700" />
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-gray-400">Max (Comp):</span>
-                <span className="text-red-400">
-                  {currencySymbol}
-                  {maxRate}
-                </span>
+            )}
+
+            <RateBreakdownTooltipBody
+              date={date}
+              yourRate={myRate}
+              minRate={minRate}
+              maxRate={maxRate}
+              currencySymbol={currencySymbol}
+            />
+
+            {/* Pointer tail below when tooltip is placed above the cell */}
+            {layout?.placement === 'above' && (
+              <div className="pointer-events-none absolute left-1/2 top-full z-[1] -mt-px -translate-x-1/2">
+                <div className="relative">
+                  <div
+                    aria-hidden
+                    className="h-0 w-0 border-l-[7px] border-r-[7px] border-t-[8px] border-l-transparent border-r-transparent border-t-[rgb(226_232_240/0.85)]"
+                  />
+                  <div
+                    aria-hidden
+                    className="absolute bottom-px left-1/2 h-0 w-0 -translate-x-1/2 border-l-[6px] border-r-[6px] border-t-[7px] border-l-transparent border-r-transparent border-t-white"
+                  />
+                </div>
               </div>
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-gray-400">Min (Comp):</span>
-                <span className="text-green-400">
-                  {currencySymbol}
-                  {minRate}
-                </span>
-              </div>
-            </div>
-            <div className="absolute left-1/2 top-full -mt-px -translate-x-1/2">
-              <div className="h-0 w-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-[#1a1d2e]" />
-            </div>
-          </div>
-        </div>
-      )}
+            )}
+          </div>,
+          document.body
+        )}
       <svg
         width="100%"
         height={chartHeight}

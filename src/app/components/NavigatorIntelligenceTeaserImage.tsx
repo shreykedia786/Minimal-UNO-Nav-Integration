@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { BarChart3, Scale } from 'lucide-react';
+import { BarChart3 } from 'lucide-react';
 import { NavigatorUpgradeRequestModal } from '@/app/components/NavigatorUpgradeRequestModal';
 import { Button } from '@/app/components/ui/button';
 import { cn } from '@/app/components/ui/utils';
-import { PARITY_PALETTE } from '@/app/lib/parityPalette';
 
 const PREVIEW_SRC = `${import.meta.env.BASE_URL}navigator-competitor-intelligence-preview.png`;
 
@@ -41,41 +40,27 @@ type HotspotConfig = {
 
 /** Mini preview of DetailedCompetitorModal — light theme to match subscribed in-app tooltips. */
 function DetailsDrawerExplainer({ withTopMargin = true }: { withTopMargin?: boolean }) {
-  const parityMatrix = [
-    [PARITY_PALETTE.meet, PARITY_PALETTE.win, PARITY_PALETTE.loss, PARITY_PALETTE.meet],
-    [PARITY_PALETTE.win, PARITY_PALETTE.meet, PARITY_PALETTE.meet, PARITY_PALETTE.loss],
-    [PARITY_PALETTE.meet, PARITY_PALETTE.loss, PARITY_PALETTE.win, PARITY_PALETTE.meet]
-  ] as const;
-  const parityChannels = ['BK', 'Exp', 'Hg'] as const;
-
   return (
     <div
       className={cn('space-y-1.5', withTopMargin && 'mt-2')}
-      aria-label="View details: competitor pricing and parity insights"
+      aria-label="View details: competitor pricing"
     >
       <div className="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
         <div className="border-b border-slate-200/80 bg-white">
           <p className="border-b border-slate-100 bg-slate-50/70 px-2 py-1 text-center text-[9px] font-medium uppercase tracking-[0.12em] text-slate-400">
             What you&apos;ll see
           </p>
-          <div className="flex" role="presentation">
-            <div className="flex min-w-0 flex-1 items-center justify-center gap-1 px-1.5 py-1.5 text-[10px] font-medium text-slate-500">
-              <BarChart3 className="size-3 shrink-0 text-slate-400" strokeWidth={2} aria-hidden />
-              <span className="truncate">Competitor</span>
-            </div>
-            <div className="w-px shrink-0 bg-slate-200/90" aria-hidden />
-            <div className="flex min-w-0 flex-1 items-center justify-center gap-1 px-1.5 py-1.5 text-[10px] font-medium text-slate-500">
-              <Scale className="size-3 shrink-0 text-slate-400" strokeWidth={2} aria-hidden />
-              <span className="truncate">Parity</span>
-            </div>
+          <div className="flex items-center justify-center gap-1.5 px-2 py-1.5 text-[10px] font-medium text-slate-500">
+            <BarChart3 className="size-3 shrink-0 text-slate-400" strokeWidth={2} aria-hidden />
+            <span className="truncate">Competitor rate analysis</span>
           </div>
         </div>
 
         <p className="border-b border-slate-100 bg-white px-3 py-2 text-[11px] leading-snug text-slate-600">
-          Compare your rates with competitors and monitor channel parity across dates.
+          Compare your rates with competitors across dates and compsets.
         </p>
 
-        <div className="grid grid-cols-2 gap-2.5 bg-slate-50/50 p-3">
+        <div className="bg-slate-50/50 p-3">
           <div className="flex min-w-0 flex-col rounded-lg border border-slate-200/80 bg-white p-2.5 shadow-sm">
             <p className="text-[11px] font-semibold leading-tight text-slate-900">Competitor pricing</p>
             <p className="mt-1 text-[10px] leading-snug text-slate-500">Rates vs market by date.</p>
@@ -84,7 +69,9 @@ function DetailsDrawerExplainer({ withTopMargin = true }: { withTopMargin?: bool
                 { lo: 22, hi: 78, you: 52 },
                 { lo: 18, hi: 72, you: 58 },
                 { lo: 28, hi: 88, you: 44 },
-                { lo: 20, hi: 80, you: 66 }
+                { lo: 20, hi: 80, you: 66 },
+                { lo: 24, hi: 74, you: 50 },
+                { lo: 16, hi: 84, you: 60 }
               ].map((col, i) => (
                 <div key={i} className="relative h-full w-4 shrink-0">
                   <div
@@ -105,32 +92,7 @@ function DetailsDrawerExplainer({ withTopMargin = true }: { withTopMargin?: bool
                 </div>
               ))}
             </div>
-            <p className="mt-2 text-center text-[10px] tabular-nums leading-none text-slate-400">Thu · Fri · Sat · Sun</p>
-          </div>
-
-          <div className="flex min-w-0 flex-col rounded-lg border border-slate-200/80 bg-white p-2.5 shadow-sm">
-            <p className="text-[11px] font-semibold leading-tight text-slate-900">Parity insights</p>
-            <p className="mt-1 text-[10px] leading-snug text-slate-500">Win, meet, or loss by channel.</p>
-            <div className="mt-2 flex flex-1 flex-col justify-center space-y-1.5">
-              {parityMatrix.map((row, ri) => (
-                <div
-                  key={parityChannels[ri]}
-                  className="grid grid-cols-[1.1rem_1fr_1fr_1fr_1fr] items-center gap-1"
-                >
-                  <span className="text-[10px] font-medium tabular-nums text-slate-500">{parityChannels[ri]}</span>
-                  {row.map((tint, ci) => (
-                    <div
-                      key={`${ri}-${ci}`}
-                      className="h-2.5 rounded-[3px]"
-                      style={{
-                        backgroundColor: `${tint}35`,
-                        boxShadow: `inset 0 0 0 1px ${tint}50`
-                      }}
-                    />
-                  ))}
-                </div>
-              ))}
-            </div>
+            <p className="mt-2 text-center text-[10px] tabular-nums leading-none text-slate-400">Wed · Thu · Fri · Sat · Sun · Mon</p>
           </div>
         </div>
       </div>
@@ -145,18 +107,8 @@ const HOTSPOTS: HotspotConfig[] = [
     topPct: 25,
     title: 'View details',
     summary:
-      'Opens a panel with two tabs: competitor pricing by date, and parity insights by channel—so you can compare rates and spot issues quickly.',
-    benefit:
-      'Review competitor rates and parity in one place, right from Rates & Inventory.'
-  },
-  {
-    id: 'parity',
-    leftPct: 31,
-    topPct: 24,
-    title: 'Parity analysis',
-    summary:
-      'The background color behind each date shows how your rate compares with OTA prices.',
-    benefit: 'Scan the week for mismatches without opening each date.'
+      'Opens a panel with competitor pricing by date and compset—so you can compare rates and spot pricing gaps quickly.',
+    benefit: 'Review competitor rates in one place, right from Rates & Inventory.'
   },
   {
     id: 'graph',
@@ -173,91 +125,6 @@ const HOTSPOTS: HotspotConfig[] = [
     benefit: 'Spot overshoot or underpricing in a second — then tune only the dates that need it.'
   }
 ];
-
-/** Parity hotspot tooltip — Meet / Win / Loss cards (matches parity onboarding reference). */
-const PARITY_TOOLTIP_LEGEND = {
-  meet: { bar: '#F9C13E', bg: '#FFF9E6', border: '#FDE68A' },
-  win: { bar: '#66C16F', bg: '#EDF9F1', border: '#C6F1D6' },
-  loss: { bar: '#DC352E', bg: '#FEECEB', border: '#FBCFD0' }
-} as const;
-
-type ParityTooltipLegendSpec = (typeof PARITY_TOOLTIP_LEGEND)[keyof typeof PARITY_TOOLTIP_LEGEND];
-
-function ParityLegendTooltipCard({
-  title,
-  subtitle,
-  spec
-}: {
-  title: string;
-  subtitle: string;
-  spec: ParityTooltipLegendSpec;
-}) {
-  return (
-    <div
-      className="flex flex-col overflow-hidden rounded-md border px-1.5 pb-1.5 pt-1.5 text-center shadow-sm"
-      style={{ borderColor: spec.border, backgroundColor: spec.bg }}
-    >
-      <div
-        className="mx-auto mb-1.5 h-2 w-full max-w-[3.25rem] shrink-0 rounded-full"
-        style={{ backgroundColor: spec.bar }}
-      />
-      <p className="text-[11px] font-bold leading-tight text-[#1a1a1a]">{title}</p>
-      <p className="mt-0.5 text-[10px] leading-snug text-[#666666]">{subtitle}</p>
-    </div>
-  );
-}
-
-function ParityTintExplainer({ withTopMargin = true }: { withTopMargin?: boolean }) {
-  const sample = PARITY_TOOLTIP_LEGEND.win;
-
-  return (
-    <div
-      className={cn('space-y-1.5', withTopMargin && 'mt-2')}
-      aria-label="Parity analysis: your direct rate vs OTA, background colors"
-    >
-      <div className="rounded-lg border border-slate-200/90 bg-white p-2 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
-        <p className="mb-1.5 text-center text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-          Parity grid
-        </p>
-        <div className="grid grid-cols-3 gap-1.5">
-          <ParityLegendTooltipCard title="Meet" subtitle="Rates match" spec={PARITY_TOOLTIP_LEGEND.meet} />
-          <ParityLegendTooltipCard title="Win" subtitle="OTA higher" spec={PARITY_TOOLTIP_LEGEND.win} />
-          <ParityLegendTooltipCard title="Loss" subtitle="OTA lower" spec={PARITY_TOOLTIP_LEGEND.loss} />
-        </div>
-        <p className="mt-1.5 border-t border-slate-200/90 pt-1.5 text-center text-[10px] leading-snug text-slate-600">
-          Cell backgrounds mirror these states so you can scan parity issues in seconds.
-        </p>
-      </div>
-
-      <div className="flex gap-2.5 rounded-xl border border-slate-200/80 bg-white p-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-        <div
-          className="w-1 shrink-0 self-stretch rounded-full"
-          style={{ backgroundColor: sample.bar }}
-          aria-hidden
-        />
-        <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-medium text-slate-500">Illustrative example</p>
-          <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-            <span
-              className="rounded-md px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-white"
-              style={{ backgroundColor: sample.bar }}
-            >
-              Win
-            </span>
-            <span className="text-[11px] font-semibold tabular-nums text-slate-900">
-              Parity <span className="text-slate-400">·</span> 76%
-            </span>
-          </div>
-          <p className="mt-1.5 text-[11px] leading-relaxed text-slate-600">
-            <span className="font-medium text-slate-800">Win</span> means at least one OTA shows a{' '}
-            <span className="font-medium text-slate-800">higher</span> rate than yours that day — your price is more
-            competitive on that date.
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function GraphPricingRows({ gp, withTopMargin = true }: { gp: GraphPricing; withTopMargin?: boolean }) {
   const above = gp.yourCheapest - gp.competitorMin;
@@ -328,8 +195,6 @@ function HotspotTooltipBody({ h }: { h: HotspotConfig }) {
         <GraphPricingRows gp={gp} withTopMargin={Boolean(h.title || h.summary)} />
       ) : h.id === 'details' ? (
         <DetailsDrawerExplainer withTopMargin={Boolean(h.title || h.summary)} />
-      ) : h.id === 'parity' ? (
-        <ParityTintExplainer withTopMargin={Boolean(h.title || h.summary)} />
       ) : h.stats ? (
         <div
           className="mt-2.5 rounded-lg border border-slate-200/90 bg-slate-50 px-2.5 py-2.5"
@@ -350,9 +215,7 @@ function HotspotTooltipBody({ h }: { h: HotspotConfig }) {
       ) : null}
       {h.id !== 'details' ? (
         <p className="mt-2.5 border-t border-slate-200/80 pt-2 text-[12px] font-medium leading-snug text-slate-700">
-          <span className={h.id === 'parity' ? 'font-semibold text-slate-600' : 'text-emerald-700'}>
-            Why it matters ·{' '}
-          </span>
+          <span className="text-emerald-700">Why it matters · </span>
           {h.benefit}
         </p>
       ) : null}
@@ -366,11 +229,8 @@ function hotspotAriaLabel(h: HotspotConfig): string {
     const g = h.graphPricing;
     return `${prefix}Your ${g.yourRatePlan} ${formatUsd(g.yourCheapest)}. Competitor low ${formatUsd(g.competitorMin)}, high ${formatUsd(g.competitorMax)}. ${h.benefit}`;
   }
-  if (h.id === 'parity') {
-    return `${prefix}${h.summary ?? ''} Parity grid: Meet Win Loss cards. Sample Win: parity score 76 percent. Win means at least one OTA is priced higher than your rate that day. ${h.benefit}`;
-  }
   if (h.id === 'details') {
-    return `${prefix}${h.summary ?? ''} Competitor pricing and parity insights preview. ${h.benefit}`;
+    return `${prefix}${h.summary ?? ''} Competitor pricing preview. ${h.benefit}`;
   }
   return `${prefix}${h.summary ?? ''} ${h.benefit}`;
 }
@@ -729,13 +589,12 @@ export function NavigatorIntelligenceTeaserImage({
           <p className="text-[11px] leading-snug text-slate-600 sm:text-[12px]">
             {navigatorUpsellContext === 'trial_expired' ? (
               <>
-                Continue comparing your rates with competitors and tracking parity in one place. Upgrade to restore
-                real-time insights across your dates and channels.
+                Continue comparing your rates with competitors in one place. Upgrade to restore real-time insights
+                across your dates and channels.
               </>
             ) : (
               <>
-                The data below is illustrative and shows how competitor pricing and parity insights will appear after
-                subscribing.
+                The data below is illustrative and shows how competitor pricing insights will appear after subscribing.
               </>
             )}
           </p>
@@ -752,7 +611,7 @@ export function NavigatorIntelligenceTeaserImage({
         <div className="relative w-full leading-none">
           <img
             src={PREVIEW_SRC}
-            alt="Preview of Navigator competitor and parity analysis in UNO — same layout as subscribed users"
+            alt="Preview of Navigator competitor rate analysis in UNO — same layout as subscribed users"
             className={cn(
               'relative z-0 block h-auto w-full align-top select-none object-contain object-left-top pointer-events-none',
               notSubscribedLead ? 'rounded-none' : 'rounded-lg'

@@ -4,12 +4,9 @@ import {
   ArrowRight,
   ArrowLeft,
   Sparkles,
-  ChevronRight,
-  BarChart3,
-  Scale
+  Info,
+  BarChart3
 } from 'lucide-react';
-import { PARITY_PALETTE } from '@/app/lib/parityPalette';
-import { LegendIconMax, LegendIconMin, LegendIconMyRate } from './CompetitorChartLegendIcons';
 import { NavigatorIntroPreview } from '@/app/components/PricingGapWelcomeAnimation';
 
 interface OnboardingStep {
@@ -31,34 +28,19 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
     highlightPadding: 0
   },
   {
-    id: 'find-it',
-    title: 'Open a room type',
-    description: 'Expand a room to see rates and the room-level competitor chart (cheapest rate plan per day).',
-    targetSelector: '[data-tour="room-chevron"]',
-    position: 'right',
-    highlightPadding: 8
-  },
-  {
     id: 'competitor-graph',
-    title: 'Understand competitor pricing',
+    title: 'Per-date competitor pricing',
     description:
-      'Compare your lowest rate with competitors’ lowest rates across dates.',
-    targetSelector: '[data-tour="rate-chart"]',
-    position: 'right',
-    highlightPadding: 8
-  },
-  {
-    id: 'parity-colors',
-    title: 'Parity',
-    description: 'Column tint reflects how your cheapest rate compares to the competitor spread (not rate-plan parity).',
+      'Hover the info icon on any date to see your rate vs. competitor min and max.',
     targetSelector: '[data-tour="rate-chart"]',
     position: 'right',
     highlightPadding: 8
   },
   {
     id: 'drawer-preview',
-    title: 'View Detailed Analysis',
-    description: 'Opens the panel with two tabs—Competitor Rate Analysis and Parity Analysis.',
+    title: 'View detailed analysis',
+    description:
+      'Open the detailed view to compare your prices with competitors for each date. See where you are priced higher or lower—and identify opportunities to adjust.',
     targetSelector: '[data-tour="view-details-button"]',
     position: 'right',
     highlightPadding: 8
@@ -111,7 +93,7 @@ interface OnboardingTourProps {
   includeNavigatorMenuStep?: boolean;
 }
 
-const chartStyleTooltipIds = new Set(['competitor-graph', 'parity-colors', 'drawer-preview']);
+const chartStyleTooltipIds = new Set(['competitor-graph']);
 
 export function OnboardingTour({
   onComplete,
@@ -148,7 +130,7 @@ export function OnboardingTour({
   const isNavigatorMenuStep = step.id === 'navigator-menu';
 
   const getTooltipWidth = (s: OnboardingStep) => {
-    if (s.id === 'competitor-graph' || s.id === 'parity-colors' || s.id === 'drawer-preview') return 332;
+    if (s.id === 'competitor-graph') return 332;
     return 360;
   };
 
@@ -157,11 +139,9 @@ export function OnboardingTour({
       if (step.id === 'welcome-intro-limited') return 540;
       return 460;
     }
-    if (step.id === 'find-it') return 320;
     if (step.id === 'expand-room-limited') return 280;
-    if (step.id === 'competitor-graph') return 300;
-    if (step.id === 'parity-colors') return 340;
-    if (step.id === 'drawer-preview') return 335;
+    if (step.id === 'competitor-graph') return 340;
+    if (step.id === 'drawer-preview') return 280;
     if (step.id === 'navigator-menu') return 330;
     return 260;
   };
@@ -248,22 +228,16 @@ export function OnboardingTour({
         const highlightCenter = currentHighlightRect.top + currentHighlightRect.height / 2;
         let idealTop = highlightCenter - 95;
 
-        // Chart + parity share `rate-chart` — keep the same high placement so Next/CTAs stay in view on short viewports.
-        // Do not push parity down; adjust the arrow only for parity (see arrowTop below).
-        if (step.id === 'competitor-graph' || step.id === 'parity-colors') {
+        // Chart tooltip — keep high placement so Next/CTAs stay in view on short viewports.
+        if (step.id === 'competitor-graph') {
           idealTop = Math.min(idealTop, 330);
-        }
-        // Drawer step: keep tooltip higher so footer CTAs stay on-screen on small viewports
-        if (step.id === 'drawer-preview') {
-          idealTop = Math.min(idealTop, 228);
         }
 
         // Apply the ideal position with bounds checking
         top = idealTop;
 
-        const bottomInset = step.id === 'drawer-preview' ? 72 : 20;
-        if (top + tooltipHeight > window.innerHeight - bottomInset) {
-          top = window.innerHeight - tooltipHeight - bottomInset;
+        if (top + tooltipHeight > window.innerHeight - 20) {
+          top = window.innerHeight - tooltipHeight - 20;
         }
         if (top < 40) {
           top = 40;
@@ -298,13 +272,9 @@ export function OnboardingTour({
     if (step.position === 'right' || step.position === 'left') {
       // Calculate where the arrow should point to align with the highlighted element
       const highlightCenter = currentHighlightRect.top + currentHighlightRect.height / 2;
-      let arrowTop = highlightCenter - top;
+      const arrowTop = highlightCenter - top;
 
-      if (step.id === 'parity-colors') {
-        arrowTop += 28;
-      }
-      const minArrowTop =
-        step.id === 'find-it' || step.id === 'drawer-preview' || step.id === 'expand-room-limited' ? 72 : 95;
+      const minArrowTop = step.id === 'expand-room-limited' ? 72 : 95;
       const maxArrowTop = tooltipHeight - 30;
       const constrainedArrowTop = Math.max(minArrowTop, Math.min(arrowTop, maxArrowTop));
 
@@ -455,27 +425,16 @@ export function OnboardingTour({
         </div>
 
         {/* Content */}
-        <div
-          className={`px-6 ${
-            isWelcomeStep ? 'py-5 pb-5' : step.id === 'drawer-preview' ? 'pt-4 pb-4' : 'py-5'
-          }`}
-        >
+        <div className={`px-6 ${isWelcomeStep ? 'py-5 pb-5' : 'py-5'}`}>
           {!isWelcomeStep && step.description ? (
             <>
               <p
                 className={`text-[13px] leading-relaxed ${
-                  step.id === 'find-it' || step.id === 'expand-room-limited'
-                    ? 'text-gray-800 font-medium'
-                    : 'text-gray-700'
+                  step.id === 'expand-room-limited' ? 'text-gray-800 font-medium' : 'text-gray-700'
                 }`}
               >
                 {step.description}
               </p>
-              {step.id === 'competitor-graph' ? (
-                <p className="mt-3 text-[13px] leading-relaxed text-gray-700">
-                  The blue line shows your rate, and the range shows competitor prices.
-                </p>
-              ) : null}
               {step.id === 'expand-room-limited' ? (
                 <p className="mt-3 text-[13px] leading-relaxed text-gray-700">
                   See how your pricing compares with competitors.
@@ -513,21 +472,6 @@ export function OnboardingTour({
                         </div>
                       </div>
                     </div>
-                    <div className="rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
-                      <div className="flex gap-3">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80">
-                          <Scale className="h-5 w-5" strokeWidth={2} />
-                        </div>
-                        <div className="min-w-0">
-                          <h4 className="text-[13px] font-bold leading-snug text-slate-900">
-                            Channel parity insights
-                          </h4>
-                          <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
-                            Track where you win, match, or lose across OTAs.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
                   </div>
                   <p className="text-center text-[10px] leading-snug text-slate-400">
                     {steps.length <= 2 ? '~30 seconds' : '~1 minute'} · {steps.length} quick step
@@ -538,144 +482,62 @@ export function OnboardingTour({
             </div>
           )}
 
-          {/* Parity legend — distinct from chart step: compact grid, flat fills, brand accent */}
-          {step.id === 'parity-colors' && (
-            <div className="mt-4">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#2753eb] mb-2.5">
-                Parity grid
-              </p>
-              <div className="rounded-xl border border-slate-200/90 bg-white p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
-                <div className="grid grid-cols-3 gap-2">
-                  <div
-                    className="rounded-lg border px-2 py-2.5 text-center"
-                    style={{
-                      borderColor: `${PARITY_PALETTE.meet}99`,
-                      backgroundColor: `${PARITY_PALETTE.meet}2e`
-                    }}
-                  >
-                    <div
-                      className="mx-auto h-1.5 w-full max-w-[56px] rounded-full"
-                      style={{ backgroundColor: PARITY_PALETTE.meet }}
-                    />
-                    <p className="mt-2 text-[11px] font-bold text-gray-900">Meet</p>
-                    <p className="mt-0.5 text-[9px] leading-snug text-gray-600">Rates match</p>
-                  </div>
-                  <div
-                    className="rounded-lg border px-2 py-2.5 text-center"
-                    style={{
-                      borderColor: `${PARITY_PALETTE.win}99`,
-                      backgroundColor: `${PARITY_PALETTE.win}2e`
-                    }}
-                  >
-                    <div
-                      className="mx-auto h-1.5 w-full max-w-[56px] rounded-full"
-                      style={{ backgroundColor: PARITY_PALETTE.win }}
-                    />
-                    <p className="mt-2 text-[11px] font-bold text-gray-900">Win</p>
-                    <p className="mt-0.5 text-[9px] leading-snug text-gray-600">OTA higher</p>
-                  </div>
-                  <div
-                    className="rounded-lg border px-2 py-2.5 text-center"
-                    style={{
-                      borderColor: `${PARITY_PALETTE.loss}99`,
-                      backgroundColor: `${PARITY_PALETTE.loss}2e`
-                    }}
-                  >
-                    <div
-                      className="mx-auto h-1.5 w-full max-w-[56px] rounded-full"
-                      style={{ backgroundColor: PARITY_PALETTE.loss }}
-                    />
-                    <p className="mt-2 text-[11px] font-bold text-gray-900">Loss</p>
-                    <p className="mt-0.5 text-[9px] leading-snug text-gray-600">OTA lower</p>
-                  </div>
-                </div>
-                <p className="mt-3 text-[10px] leading-relaxed text-gray-600 border-t border-slate-100 pt-3">
-                  Cell backgrounds mirror these states so you can scan parity issues in seconds.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Step 2: chevron target — minimal copy; spotlight + arrow aim at real chevron */}
-          {step.id === 'find-it' && (
-            <div className="mt-4">
-              <div className="overflow-hidden rounded-xl border border-slate-200/90 bg-gradient-to-br from-white to-slate-50/80 shadow-sm">
-                <div className="flex items-center gap-3 px-3 py-3">
-                  <div
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#2753eb]/30 bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]"
-                    aria-hidden
-                  >
-                    <ChevronRight className="h-5 w-5 text-[#2753eb]" strokeWidth={2.25} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[12px] font-semibold tracking-tight text-gray-900">Expand this row</p>
-                    <p className="mt-0.5 text-[11px] leading-snug text-gray-600">
-                      Unlocks <span className="font-medium text-gray-800">Competitor & Parity</span> for that plan.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Competitor chart legend — Max / Yours / Min, matches RateCandlestickChart */}
+          {/* Hover-tooltip preview — mirrors RoomDateInfoIcon visually: trigger glyph + tailed card. */}
           {step.id === 'competitor-graph' && (
-            <div className="mt-4">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#2753eb] mb-2">
-                Competitor range
-              </p>
-              <div className="rounded-xl border border-slate-200/90 bg-white p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
-                <div className="grid grid-cols-3 gap-1.5">
-                  <div className="rounded-lg border border-red-200/90 bg-red-50/90 px-1.5 py-2 text-center">
-                    <LegendIconMax className="mx-auto h-10 w-8" />
-                    <p className="mt-1.5 text-[11px] font-bold text-gray-900">Max</p>
-                    <p className="mt-0.5 text-[9px] leading-tight text-gray-600">OTA high</p>
-                  </div>
-                  <div className="rounded-lg border border-blue-200/90 bg-blue-50/90 px-1.5 py-2 text-center">
-                    <LegendIconMyRate className="mx-auto h-10 w-8" />
-                    <p className="mt-1.5 text-[11px] font-bold text-gray-900">Yours</p>
-                    <p className="mt-0.5 text-[9px] leading-tight text-gray-600">On spine</p>
-                  </div>
-                  <div className="rounded-lg border border-emerald-200/90 bg-emerald-50/90 px-1.5 py-2 text-center">
-                    <LegendIconMin className="mx-auto h-10 w-8" />
-                    <p className="mt-1.5 text-[11px] font-bold text-gray-900">Min</p>
-                    <p className="mt-0.5 text-[9px] leading-tight text-gray-600">OTA low</p>
-                  </div>
-                </div>
-                <p className="mt-2 text-[10px] leading-snug text-gray-600 border-t border-slate-100 pt-2">
-                  Same as the chart: vertical range line, min in green and max in red, blue dot with horizontal ties
-                  across dates.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Step 5 of 5 — matches DetailedCompetitorModal tabs (compact for small viewports) */}
-          {step.id === 'drawer-preview' && (
             <div className="mt-3">
-              <div className="rounded-xl border border-slate-200/90 bg-white p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
-                <div className="space-y-1.5">
-                  <div className="flex gap-2.5 rounded-lg border border-slate-100 bg-slate-50/70 px-2 py-2">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-blue-50 text-[#2753eb] ring-1 ring-blue-100">
-                      <BarChart3 className="h-3.5 w-3.5" strokeWidth={2} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[11px] font-bold text-slate-900 leading-tight">Competitor Rate Analysis</p>
-                      <p className="mt-0.5 text-[9px] leading-snug text-slate-600">
-                        Track pricing against individual competitors and avg. compset rates.
-                      </p>
-                    </div>
+              {/* Trigger hint: animated info icon "sitting" above the tooltip — reads as a real hover affordance. */}
+              <div className="mb-1.5 flex items-center gap-2 px-0.5">
+                <span className="relative inline-flex h-[16px] w-[16px] items-center justify-center rounded-full border border-slate-300/90 bg-white text-[#1565C0] shadow-[0_1px_2px_rgba(15,23,42,0.08)]">
+                  <Info className="h-[10px] w-[10px]" strokeWidth={2.5} aria-hidden />
+                  <span
+                    aria-hidden
+                    className="absolute inset-0 animate-ping rounded-full bg-[#2196F3]/30"
+                  />
+                </span>
+                <span className="text-[10.5px] font-medium text-slate-600">
+                  Hover the info icon on a date
+                </span>
+                <span className="ml-auto text-[8.5px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                  Preview
+                </span>
+              </div>
+
+              {/* Tooltip card */}
+              <div className="relative rounded-xl border border-slate-200/85 bg-gradient-to-b from-slate-50/90 to-white px-2.5 pb-2 pt-2 shadow-[0_10px_24px_-14px_rgba(15,23,42,0.22),inset_0_1px_0_rgba(255,255,255,0.9)]">
+                {/* Pointer tail connecting to the info-icon trigger above */}
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute -top-[5px] left-3 h-2 w-2 rotate-45 border-l border-t border-slate-200/85 bg-slate-50/90"
+                />
+
+                {/* Date / room header */}
+                <div className="flex items-baseline justify-between gap-2 border-b border-slate-200/70 pb-1.5">
+                  <span className="text-[11px] font-semibold leading-tight text-slate-900">Thu, 18 Dec</span>
+                  <span className="text-[9.5px] font-medium text-slate-400">Standard Room</span>
+                </div>
+
+                {/* Rate rows with color rails */}
+                <div className="mt-2 space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <span aria-hidden className="h-4 w-[3px] shrink-0 rounded-full bg-sky-500" />
+                    <span className="flex-1 truncate text-[10.5px] font-semibold tracking-tight text-sky-700">
+                      Your rate
+                    </span>
+                    <span className="text-[13px] font-bold tabular-nums leading-none text-slate-900">€420</span>
                   </div>
-                  <div className="flex gap-2.5 rounded-lg border border-slate-100 bg-slate-50/70 px-2 py-2">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
-                      <Scale className="h-3.5 w-3.5" strokeWidth={2} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[11px] font-bold text-slate-900 leading-tight">Parity Analysis</p>
-                      <p className="mt-0.5 text-[9px] leading-snug text-slate-600">
-                        Quickly see where you win, meet, or lose with detailed OTA-level insights.
-                      </p>
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <span aria-hidden className="h-4 w-[3px] shrink-0 rounded-full bg-emerald-500" />
+                    <span className="flex-1 truncate text-[10.5px] font-semibold tracking-tight text-emerald-700">
+                      Competitor min
+                    </span>
+                    <span className="text-[13px] font-bold tabular-nums leading-none text-slate-900">€365</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span aria-hidden className="h-4 w-[3px] shrink-0 rounded-full bg-rose-500" />
+                    <span className="flex-1 truncate text-[10.5px] font-semibold tracking-tight text-rose-700">
+                      Competitor max
+                    </span>
+                    <span className="text-[13px] font-bold tabular-nums leading-none text-slate-900">€510</span>
                   </div>
                 </div>
               </div>
@@ -697,9 +559,7 @@ export function OnboardingTour({
           )}
 
           {/* Progress indicators */}
-          <div
-            className={`flex items-center gap-1.5 mb-4 ${step.id === 'drawer-preview' ? 'mt-4' : 'mt-5'}`}
-          >
+          <div className="flex items-center gap-1.5 mb-4 mt-5">
             {steps.map((_, index) => (
               <div
                 key={index}

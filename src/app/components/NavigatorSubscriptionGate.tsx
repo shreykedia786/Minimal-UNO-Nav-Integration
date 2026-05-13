@@ -40,8 +40,8 @@ export function NavigatorAccessGate({
               Rates &amp; inventory
             </h1>
             <p className="mt-3 max-w-sm text-[15px] leading-relaxed text-[#555555]">
-              Navigator competitive and parity features are integrated into UNO. Tell us whether your property already
-              includes Navigator, or whether your preview access has ended, so we can show the right experience.
+              Navigator competitive insights are integrated into UNO. Tell us whether your property already includes
+              Navigator, or whether your preview access has ended, so we can show the right experience.
             </p>
           </div>
 
@@ -86,9 +86,9 @@ export function NavigatorAccessGate({
           </div>
 
           <p className="mt-8 text-center text-[12px] leading-snug text-[#888888]">
-            You can always use Rates &amp; Inventory in UNO. Competitor and parity views need Navigator because live
-            market data is costly to source and refresh. Use the middle option for the post-trial upgrade path (if you
-            have no ended trial stored yet, this demo saves a sample end date in this browser only).
+            You can always use Rates &amp; Inventory in UNO. Competitor views need Navigator because live market data
+            is costly to source and refresh. Use the middle option for the post-trial upgrade path (if you have no
+            ended trial stored yet, this demo saves a sample end date in this browser only).
           </p>
         </div>
       </div>

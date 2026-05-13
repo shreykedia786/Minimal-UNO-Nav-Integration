@@ -35,7 +35,7 @@ export function NavigatorTrialEndedModal({
               Your Navigator trial has ended
             </DialogTitle>
             <DialogDescription id="navigator-trial-ended-desc" className="text-[14px] leading-relaxed text-white/85">
-              Keep competitor pricing and parity insights active to stay competitive and avoid missed opportunities.
+              Keep competitor pricing insights active to stay competitive and avoid missed opportunities.
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -50,7 +50,7 @@ export function NavigatorTrialEndedModal({
               </li>
               <li className="flex items-start gap-2">
                 <Sparkles className="mt-0.5 size-3.5 shrink-0 text-[#2753eb]" aria-hidden />
-                Track parity to see where you’re winning or losing
+                See competitor min and max rates per day to spot pricing gaps
               </li>
               <li className="flex items-start gap-2">
                 <Sparkles className="mt-0.5 size-3.5 shrink-0 text-[#2753eb]" aria-hidden />

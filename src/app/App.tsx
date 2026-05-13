@@ -64,7 +64,7 @@ function NavigatorTrialBanner({
       <div className="mx-auto flex max-w-[1440px] flex-col items-center justify-center gap-2 text-center sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-3 sm:gap-y-2 sm:text-left">
         <p className="max-w-[920px] font-normal leading-snug text-white/95 sm:leading-tight">
           You have <strong className="font-semibold text-white">{left}</strong> day{left === 1 ? '' : 's'} left in your
-          Navigator trial. Compare your rates with competitors and track parity before it ends.
+          Navigator trial. Compare your rates with competitors before it ends.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-2 sm:shrink-0">
           <span className="hidden select-none text-white/80 sm:inline" aria-hidden>
@@ -134,8 +134,7 @@ function NavigatorLimitedBanner({
               <>Your upgrade request has been received. Our team will contact you shortly to proceed.</>
             ) : (
               <>
-                Your Navigator trial has ended. Upgrade to continue tracking live competitor pricing and parity
-                insights.
+                Your Navigator trial has ended. Upgrade to continue tracking live competitor pricing.
               </>
             )
           ) : trialRequestSubmitted ? (
@@ -143,8 +142,8 @@ function NavigatorLimitedBanner({
           ) : (
             <>
               <span aria-hidden>👉 </span>
-              Want to stay competitive on pricing? Compare your rates with competitors and track your parity to make
-              smarter pricing decisions
+              Want to stay competitive on pricing? Compare your rates with competitors to make smarter pricing
+              decisions
             </>
           )}
         </p>
@@ -211,7 +210,7 @@ export default function App() {
       return false;
     }
   });
-  /** Subscribed demo: UNO date range longer than Navigator’s 365-day competitor/parity window. */
+  /** Subscribed demo: UNO date range longer than Navigator’s 365-day competitor data window. */
   const [extendedUnoBeyondNavigator, setExtendedUnoBeyondNavigator] = useState(false);
 
   const handleLimitedBannerDismiss = useCallback(() => {
@@ -444,13 +443,6 @@ export default function App() {
     setOnboardingInitialStep(0);
   };
 
-  const handleTourStepChange = (stepIndex: number) => {
-    // Step 2 (index 1): expand Standard Room so the chevron / chart targets are visible (full and limited tours).
-    if (stepIndex === 1) {
-      window.dispatchEvent(new CustomEvent('onboarding-expand-standard-room'));
-    }
-  };
-
   const intelligenceOn = navigatorIntelligenceUnlocked(entitlement);
 
   if (accessScreen === 'gate') {
@@ -600,7 +592,6 @@ export default function App() {
           includeNavigatorMenuStep={entitlement === 'full'}
           variant={entitlement === 'limited' || entitlement === 'trial_expired' ? 'limited' : 'full'}
           onComplete={handleTourComplete}
-          onStepChange={handleTourStepChange}
         />
       )}
 

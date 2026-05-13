@@ -41,7 +41,7 @@ export function NavigatorTrialOnboardingModal({
               Your 30-day trial is active
             </DialogTitle>
             <DialogDescription id="navigator-trial-onboarding-desc" className="text-[14px] leading-relaxed text-white/90">
-              Explore competitor pricing and parity insights using standard configurations during your trial.
+              Explore competitor pricing insights using standard configurations during your trial.
             </DialogDescription>
           </DialogHeader>
         </div>

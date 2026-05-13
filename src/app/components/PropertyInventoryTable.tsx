@@ -1,7 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { ChevronRight, ChevronLeft, Lock, Zap } from 'lucide-react';
 import svgPaths from "../../imports/svg-eqrmta6hqq";
-import { RateCandlestickChart, type RoomLevelCompetitorRates } from './RateCandlestickChart';
+import {
+  RoomDateInfoIcon,
+  RoomViewDetailsButton,
+  useRoomCompetitorAnalysis,
+  type RoomLevelCompetitorRates
+} from './RoomCompetitorAnalysis';
 import { NavigatorIntelligenceLockedRow } from './NavigatorIntelligenceLockedRow';
 import { demoNavigatorUnavailableFromColumnIndex } from '@/app/lib/navigatorDateCoverage';
 
@@ -87,7 +92,7 @@ function parseSuiteRateInput(raw: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-/** Demo: first N columns keep Navigator competitor/parity; rest simulate “past 365-day” limit. */
+/** Demo: first N columns keep Navigator competitor data; rest simulate “past 365-day” limit. */
 const NAVIGATOR_DEMO_COVERED_COLUMNS = 10;
 
 export function PropertyInventoryTable({
@@ -101,7 +106,7 @@ export function PropertyInventoryTable({
   onNavigatorUpgradeRequestAcknowledged,
   navigatorUpsellContext = 'limited'
 }: {
-  /** When false, competitor / parity chart rows show an upsell to Navigator trial. */
+  /** When false, the competitor preview row shows an upsell to Navigator trial. */
   navigatorIntelligenceUnlocked?: boolean;
   /** Subscribed: UNO range extends beyond Navigator’s 1-year market-data window (demo). */
   extendedUnoBeyondNavigator?: boolean;
@@ -195,19 +200,6 @@ export function PropertyInventoryTable({
     if (g <= b) updateSuiteGdsRateFromDrawer(index, value);
     else updateSuiteBarRateFromDrawer(index, value);
   };
-
-  // Listen for onboarding event to expand Standard Room
-  useEffect(() => {
-    const handleExpandStandardRoom = () => {
-      setIsStandardRoomExpanded(true);
-    };
-
-    window.addEventListener('onboarding-expand-standard-room', handleExpandStandardRoom);
-
-    return () => {
-      window.removeEventListener('onboarding-expand-standard-room', handleExpandStandardRoom);
-    };
-  }, []);
 
   const suiteRoomCheapest = useMemo(() => {
     const rates: number[] = [];
@@ -384,6 +376,49 @@ export function PropertyInventoryTable({
     null, // Feb 03
   ];
 
+  /**
+   * Per-room competitor analysis. Replaces the heavy candlestick chart with a
+   * lightweight per-date info icon plus an on-demand drawer. Hooks must be unconditional;
+   * the derived data is only surfaced visually when Navigator is unlocked.
+   */
+  const standardAnalysis = useRoomCompetitorAnalysis({
+    dates,
+    rates: STANDARD_SYSTEM_CHEAPEST.rates,
+    myRateMeta: STANDARD_SYSTEM_CHEAPEST.meta,
+    getCompetitorRates: getCompetitorRatesForDate,
+    roomType: 'Standard Room',
+    drawerInclusionPlanNames: DRAWER_INCLUSIONS_STANDARD,
+    ratePlan: 'Room aggregate (cheapest rate plan per day)',
+    events,
+    navigatorUnavailableFromIndex
+  });
+
+  const suiteAnalysis = useRoomCompetitorAnalysis({
+    dates,
+    rates: suiteRoomCheapest.rates,
+    myRateMeta: suiteRoomCheapest.meta,
+    competitorBaseRates: SUITE_ROOM_COMPETITOR_BASELINE,
+    getCompetitorRates: getCompetitorRatesForDate,
+    onYourRatesChange: updateSuiteCheapestFromDrawer,
+    roomType: 'Suite',
+    drawerInclusionPlanNames: DRAWER_INCLUSIONS_SUITE,
+    ratePlan: 'Room aggregate (cheapest rate plan per day)',
+    events,
+    navigatorUnavailableFromIndex
+  });
+
+  const deluxeAnalysis = useRoomCompetitorAnalysis({
+    dates,
+    rates: DELUXE_ROOM_CHEAPEST.rates,
+    myRateMeta: DELUXE_ROOM_CHEAPEST.meta,
+    getCompetitorRates: getCompetitorRatesForDate,
+    roomType: 'Deluxe Room',
+    drawerInclusionPlanNames: DRAWER_INCLUSIONS_DELUXE,
+    ratePlan: 'Room aggregate (cheapest rate plan per day)',
+    events,
+    navigatorUnavailableFromIndex
+  });
+
   // Icon components matching Figma exactly
   const IconLock = () => (
     <div className="relative shrink-0 size-[12px]">
@@ -475,8 +510,10 @@ export function PropertyInventoryTable({
                       <span className="text-[13px] font-semibold text-[#333333] leading-[19.5px]">Property Details</span>
                     </button>
                   </td>
-                  <td className="px-3 py-3 text-center border-r border-[#e0e0e0] bg-white">
-                    <span className="text-[11px] font-medium text-[#666666] leading-[16.5px]">Inventory</span>
+                  <td className="px-2 py-3 border-r border-[#e0e0e0] bg-white align-top">
+                    <div className="flex flex-col items-start">
+                      <span className="text-[11px] font-medium text-[#666666] leading-[16.5px]">Inventory</span>
+                    </div>
                   </td>
                   {dates.map((_, idx) => (
                     <td key={idx} className="px-3 py-3 text-center border-r border-[#e0e0e0] bg-white">
@@ -547,7 +584,7 @@ export function PropertyInventoryTable({
                   <td className="px-4 py-3 bg-white border-r-0">
                     <button
                       onClick={() => setIsStandardRoomExpanded(!isStandardRoomExpanded)}
-                      className="flex items-center gap-2 w-full text-left"
+                      className="flex w-full min-w-0 items-center gap-2 text-left"
                       data-tour="room-chevron"
                     >
                       <span
@@ -565,39 +602,51 @@ export function PropertyInventoryTable({
                           </svg>
                         )}
                       </span>
-                      <div>
-                        <div className="text-[12px] font-semibold text-[#333333] leading-[18px]">Standard Room</div>
-                        <div className="text-[10px] font-medium italic text-[#999999] leading-[15px]">STD</div>
+                      <div className="min-w-0 flex-1">
+                        <div className="line-clamp-2 break-words text-[12px] font-semibold text-[#333333] leading-[18px]">
+                          Standard Room
+                        </div>
+                        <div className="truncate text-[10px] font-medium italic text-[#999999] leading-[15px]">STD</div>
                       </div>
                     </button>
                   </td>
-                  <td className="px-3 py-3 text-center border-r border-[#e0e0e0] bg-white">
-                    <span className="text-[11px] font-medium text-[#666666] leading-[16.5px]">Inventory</span>
+                  <td className="px-2 py-3 border-r border-[#e0e0e0] bg-white align-top">
+                    <div className="flex flex-col items-start gap-1.5">
+                      <span className="text-[11px] font-medium text-[#666666] leading-[16.5px]">Inventory</span>
+                      {navigatorIntelligenceUnlocked && (
+                        <RoomViewDetailsButton
+                          onClick={standardAnalysis.openDetails}
+                          dataTour="view-details-button"
+                        />
+                      )}
+                    </div>
                   </td>
-                  {dates.map((_, idx) => (
-                    <td key={idx} className="px-3 py-3 text-center border-r border-[#e0e0e0] bg-white relative">
-                      <span className="text-[13px] font-normal text-[#333333] leading-[19.5px]">5</span>
-                      <div className="absolute bottom-0 left-[0.5px] right-0 h-[3px] bg-[#4ecdc4] w-[79px]"></div>
-                    </td>
-                  ))}
+                  {dates.map((_, idx) => {
+                    const cellUnavailable = standardAnalysis.isCellNavigatorUnavailable(idx);
+                    const showCompetitorInfo = navigatorIntelligenceUnlocked && !cellUnavailable;
+                    const datum = standardAnalysis.chartData[idx];
+                    return (
+                      <td
+                        key={idx}
+                        className="px-3 py-3 text-center border-r border-[#e0e0e0] bg-white relative"
+                        data-tour={navigatorIntelligenceUnlocked && idx === 0 ? 'rate-chart' : undefined}
+                      >
+                        <span className="text-[13px] font-normal text-[#333333] leading-[19.5px]">5</span>
+                        <div className="absolute bottom-0 left-[0.5px] right-0 h-[3px] bg-[#4ecdc4] w-[79px]"></div>
+                        {showCompetitorInfo && (
+                          <RoomDateInfoIcon
+                            data={datum}
+                            roomTitle="Standard Room"
+                          />
+                        )}
+                      </td>
+                    );
+                  })}
                 </tr>
 
                 {isStandardRoomExpanded && (
                   <>
-                    {navigatorIntelligenceUnlocked ? (
-                      <RateCandlestickChart
-                        dates={dates}
-                        rates={STANDARD_SYSTEM_CHEAPEST.rates}
-                        myRateMeta={STANDARD_SYSTEM_CHEAPEST.meta}
-                        getCompetitorRates={getCompetitorRatesForDate}
-                        showLegend={true}
-                        roomType="Standard Room"
-                        drawerInclusionPlanNames={DRAWER_INCLUSIONS_STANDARD}
-                        ratePlan="Room aggregate (cheapest rate plan per day)"
-                        events={events}
-                        navigatorUnavailableFromIndex={navigatorUnavailableFromIndex}
-                      />
-                    ) : lockedNavigatorPreviewDismissed ? null : (
+                    {!navigatorIntelligenceUnlocked && !lockedNavigatorPreviewDismissed && (
                       <NavigatorIntelligenceLockedRow
                         dates={dates}
                         onRequestTrial={() => onRequestNavigatorTrial?.()}
@@ -650,6 +699,7 @@ export function PropertyInventoryTable({
                       ))}
                     </tr>
 
+                    {/* Standard Room rate plans (Advance / Member / Mobile / Corporate / B&B) */}
                     {[
                       {
                         id: 'std-advance',
@@ -703,6 +753,7 @@ export function PropertyInventoryTable({
                 )}
               </tbody>
             </table>
+            {standardAnalysis.modalElement}
           </div>
 
           {/* Suite Section */}
@@ -721,7 +772,7 @@ export function PropertyInventoryTable({
                   <td className="px-4 py-3 border-r-0">
                     <button
                       onClick={() => setIsSuiteExpanded(!isSuiteExpanded)}
-                      className="flex items-center gap-2 w-full text-left"
+                      className="flex w-full min-w-0 items-center gap-2 text-left"
                     >
                       {isSuiteExpanded ? (
                         <svg className="w-[14px] h-[14px]" fill="none" viewBox="0 0 14 14">
@@ -732,40 +783,46 @@ export function PropertyInventoryTable({
                           <path d="M6 12L10 8L6 4" stroke="#666666" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33333" />
                         </svg>
                       )}
-                      <div>
-                        <div className="text-[12px] font-semibold text-[#333333] leading-[18px]">Suite</div>
-                        <div className="text-[10px] font-medium italic text-[#666666] leading-[15px]">SUI7</div>
+                      <div className="min-w-0 flex-1">
+                        <div className="line-clamp-2 break-words text-[12px] font-semibold text-[#333333] leading-[18px]">
+                          Suite
+                        </div>
+                        <div className="truncate text-[10px] font-medium italic text-[#666666] leading-[15px]">SUI7</div>
                       </div>
                     </button>
                   </td>
-                  <td className="px-3 py-3 text-center border-r border-[#e0e0e0]">
-                    <span className="text-[11px] font-medium text-[#666666] leading-[16.5px]">Inventory</span>
+                  <td className="px-2 py-3 border-r border-[#e0e0e0] align-top">
+                    <div className="flex flex-col items-start gap-1.5">
+                      <span className="text-[11px] font-medium text-[#666666] leading-[16.5px]">Inventory</span>
+                      {navigatorIntelligenceUnlocked && (
+                        <RoomViewDetailsButton onClick={suiteAnalysis.openDetails} />
+                      )}
+                    </div>
                   </td>
-                  {dates.map((_, idx) => (
-                    <td key={idx} className="px-3 py-3 text-center border-r border-[#e0e0e0]">
-                      <span className="text-[13px] font-normal text-[#333333] leading-[19.5px]">19</span>
-                    </td>
-                  ))}
+                  {dates.map((_, idx) => {
+                    const cellUnavailable = suiteAnalysis.isCellNavigatorUnavailable(idx);
+                    const showCompetitorInfo = navigatorIntelligenceUnlocked && !cellUnavailable;
+                    const datum = suiteAnalysis.chartData[idx];
+                    return (
+                      <td
+                        key={idx}
+                        className="px-3 py-3 text-center border-r border-[#e0e0e0] relative"
+                      >
+                        <span className="text-[13px] font-normal text-[#333333] leading-[19.5px]">19</span>
+                        {showCompetitorInfo && (
+                          <RoomDateInfoIcon
+                            data={datum}
+                            roomTitle="Suite"
+                          />
+                        )}
+                      </td>
+                    );
+                  })}
                 </tr>
 
                 {isSuiteExpanded && (
                   <>
-                    {navigatorIntelligenceUnlocked ? (
-                      <RateCandlestickChart
-                        dates={dates}
-                        rates={suiteRoomCheapest.rates}
-                        myRateMeta={suiteRoomCheapest.meta}
-                        getCompetitorRates={getCompetitorRatesForDate}
-                        competitorBaseRates={SUITE_ROOM_COMPETITOR_BASELINE}
-                        onYourRatesChange={updateSuiteCheapestFromDrawer}
-                        showLegend={true}
-                        roomType="Suite"
-                        drawerInclusionPlanNames={DRAWER_INCLUSIONS_SUITE}
-                        ratePlan="Room aggregate (cheapest rate plan per day)"
-                        events={events}
-                        navigatorUnavailableFromIndex={navigatorUnavailableFromIndex}
-                      />
-                    ) : lockedNavigatorPreviewDismissed ? null : (
+                    {!navigatorIntelligenceUnlocked && !lockedNavigatorPreviewDismissed && (
                       <NavigatorIntelligenceLockedRow
                         dates={dates}
                         onRequestTrial={() => onRequestNavigatorTrial?.()}
@@ -866,6 +923,7 @@ export function PropertyInventoryTable({
                 )}
               </tbody>
             </table>
+            {suiteAnalysis.modalElement}
           </div>
 
           {/* Deluxe Room Section */}
@@ -884,7 +942,7 @@ export function PropertyInventoryTable({
                   <td className="px-4 py-3 bg-white border-r-0">
                     <button
                       onClick={() => setIsDeluxeRoomExpanded(!isDeluxeRoomExpanded)}
-                      className="flex items-center gap-2 w-full text-left"
+                      className="flex w-full min-w-0 items-center gap-2 text-left"
                     >
                       {isDeluxeRoomExpanded ? (
                         <svg className="w-[14px] h-[14px]" fill="none" viewBox="0 0 14 14">
@@ -895,39 +953,47 @@ export function PropertyInventoryTable({
                           <path d="M6 12L10 8L6 4" stroke="#666666" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33333" />
                         </svg>
                       )}
-                      <div>
-                        <div className="text-[12px] font-semibold text-[#333333] leading-[18px]">Deluxe Room</div>
-                        <div className="text-[10px] font-medium italic text-[#999999] leading-[15px]">DLX</div>
+                      <div className="min-w-0 flex-1">
+                        <div className="line-clamp-2 break-words text-[12px] font-semibold text-[#333333] leading-[18px]">
+                          Deluxe Room
+                        </div>
+                        <div className="truncate text-[10px] font-medium italic text-[#999999] leading-[15px]">DLX</div>
                       </div>
                     </button>
                   </td>
-                  <td className="px-3 py-3 text-center border-r border-[#e0e0e0] bg-white">
-                    <span className="text-[11px] font-medium text-[#666666] leading-[16.5px]">Inventory</span>
+                  <td className="px-2 py-3 border-r border-[#e0e0e0] bg-white align-top">
+                    <div className="flex flex-col items-start gap-1.5">
+                      <span className="text-[11px] font-medium text-[#666666] leading-[16.5px]">Inventory</span>
+                      {navigatorIntelligenceUnlocked && (
+                        <RoomViewDetailsButton onClick={deluxeAnalysis.openDetails} />
+                      )}
+                    </div>
                   </td>
-                  {dates.map((_, idx) => (
-                    <td key={idx} className="px-3 py-3 text-center border-r border-[#e0e0e0] bg-white relative">
-                      <span className="text-[13px] font-normal text-[#333333] leading-[19.5px]">5</span>
-                      <div className="absolute bottom-0 left-[0.5px] right-0 h-[3px] bg-[#4ecdc4] w-[79px]"></div>
-                    </td>
-                  ))}
+                  {dates.map((_, idx) => {
+                    const cellUnavailable = deluxeAnalysis.isCellNavigatorUnavailable(idx);
+                    const showCompetitorInfo = navigatorIntelligenceUnlocked && !cellUnavailable;
+                    const datum = deluxeAnalysis.chartData[idx];
+                    return (
+                      <td
+                        key={idx}
+                        className="px-3 py-3 text-center border-r border-[#e0e0e0] bg-white relative"
+                      >
+                        <span className="text-[13px] font-normal text-[#333333] leading-[19.5px]">5</span>
+                        <div className="absolute bottom-0 left-[0.5px] right-0 h-[3px] bg-[#4ecdc4] w-[79px]"></div>
+                        {showCompetitorInfo && (
+                          <RoomDateInfoIcon
+                            data={datum}
+                            roomTitle="Deluxe Room"
+                          />
+                        )}
+                      </td>
+                    );
+                  })}
                 </tr>
 
                 {isDeluxeRoomExpanded && (
                   <>
-                    {navigatorIntelligenceUnlocked ? (
-                      <RateCandlestickChart
-                        dates={dates}
-                        rates={DELUXE_ROOM_CHEAPEST.rates}
-                        myRateMeta={DELUXE_ROOM_CHEAPEST.meta}
-                        getCompetitorRates={getCompetitorRatesForDate}
-                        showLegend={true}
-                        roomType="Deluxe Room"
-                        drawerInclusionPlanNames={DRAWER_INCLUSIONS_DELUXE}
-                        ratePlan="Room aggregate (cheapest rate plan per day)"
-                        events={events}
-                        navigatorUnavailableFromIndex={navigatorUnavailableFromIndex}
-                      />
-                    ) : lockedNavigatorPreviewDismissed ? null : (
+                    {!navigatorIntelligenceUnlocked && !lockedNavigatorPreviewDismissed && (
                       <NavigatorIntelligenceLockedRow
                         dates={dates}
                         onRequestTrial={() => onRequestNavigatorTrial?.()}
@@ -983,6 +1049,7 @@ export function PropertyInventoryTable({
                 )}
               </tbody>
             </table>
+            {deluxeAnalysis.modalElement}
           </div>
         </div>
       </div>

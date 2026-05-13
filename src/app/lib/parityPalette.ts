@@ -1,6 +1,7 @@
 /**
- * Navigator parity UI — Win / Meet / Loss.
- * Used by the parity drawer, stacked distribution bars, and table chart column tints.
+ * Retired parity palette — Win / Meet / Loss. The product no longer surfaces parity,
+ * but these constants stay so the (now-dead) parity helpers inside
+ * `DetailedCompetitorModal` still type-check. Tree-shaken from the production bundle.
  */
 export const PARITY_WIN_HEX = '#4BCE64';
 export const PARITY_MEET_HEX = '#FFC51E';
