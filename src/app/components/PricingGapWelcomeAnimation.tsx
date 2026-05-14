@@ -6,18 +6,7 @@ import { BarChart3, Lightbulb, TrendingDown } from 'lucide-react';
  * preview doubles as a teaser for what users will see inside.
  */
 
-const SECTION_KICKER = 'text-[10px] font-bold uppercase tracking-[0.14em] text-slate-700';
-const SECTION_AUX = 'text-[10px] leading-none text-slate-400';
 const STAGE_LABEL = 'text-[9px] font-bold uppercase tracking-[0.16em] text-slate-400';
-
-function SectionHeader({ kicker, label }: { kicker: string; label: string }) {
-  return (
-    <div className="mb-2 flex items-baseline justify-between gap-3">
-      <p className={SECTION_KICKER}>{kicker}</p>
-      <p className={SECTION_AUX}>{label}</p>
-    </div>
-  );
-}
 
 function InsightCallout({ icon, title, body }: { icon: 'bulb' | 'down'; title: string; body: string }) {
   const Icon = icon === 'bulb' ? Lightbulb : TrendingDown;
@@ -110,12 +99,7 @@ function ValuePoint({ title, body }: { title: string; body: string }) {
 
 export function NavigatorIntroPreview() {
   return (
-    <div className="onboard-limited-pricing-visual w-full max-w-[460px] mx-auto">
-      <SectionHeader kicker="Navigator" label="Stay competitive on price" />
-      <p className="mb-2.5 text-center text-[12.5px] leading-snug text-slate-600">
-        Monitor competitor pricing across your dates and channels.
-      </p>
-
+    <div className="onboard-limited-pricing-visual mx-auto w-full max-w-[460px]">
       <div className="grid gap-2">
         <ValuePoint
           title="Spot pricing gaps"

@@ -127,58 +127,77 @@ function NavigatorLimitedBanner({
       >
         <X className="size-[18px]" strokeWidth={2} aria-hidden />
       </button>
-      <div className="mx-auto flex max-w-[1440px] flex-col items-center justify-center gap-2 text-center sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-3 sm:gap-y-2 sm:text-left">
-        <p className="max-w-[920px] font-normal leading-snug text-white/95 sm:leading-tight">
-          {upsellContext === 'trial_ended' ? (
-            upgradeRequestSubmitted ? (
-              <>Your upgrade request has been received. Our team will contact you shortly to proceed.</>
-            ) : (
+      <div
+        className={`mx-auto flex max-w-[1440px] flex-col items-center justify-center gap-2 text-center sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3 sm:gap-y-2 ${
+          (upsellContext !== 'trial_ended' && trialRequestSubmitted) ||
+          (upsellContext === 'trial_ended' && upgradeRequestSubmitted)
+            ? 'sm:justify-center'
+            : 'sm:text-left'
+        }`}
+      >
+        {upsellContext !== 'trial_ended' && trialRequestSubmitted ? (
+          <p className="m-0 mx-auto w-full max-w-[920px] text-center text-[13px] font-normal leading-snug text-white/95 sm:text-center sm:text-[14px] sm:leading-tight">
+            Thanks for your request! Your 30-day trial will be activated shortly—we&apos;ll notify you once it&apos;s
+            ready. For any queries, contact{' '}
+            <a
+              href="mailto:help@rategain.com"
+              className="font-medium text-white underline decoration-white/50 underline-offset-2 transition-colors hover:decoration-white"
+            >
+              help@rategain.com
+            </a>
+          </p>
+        ) : upsellContext === 'trial_ended' && upgradeRequestSubmitted ? (
+          <p className="m-0 mx-auto w-full max-w-[920px] text-center text-[13px] font-normal leading-snug text-white/95 sm:text-center sm:text-[14px] sm:leading-tight lg:whitespace-nowrap">
+            Thanks for your upgrade request! Our team will contact you shortly to take this forward. For any
+            questions, reach out to{' '}
+            <a
+              href="mailto:help@rategain.com"
+              className="font-medium text-white underline decoration-white/50 underline-offset-2 transition-colors hover:decoration-white"
+            >
+              help@rategain.com
+            </a>
+          </p>
+        ) : (
+          <p className="max-w-[920px] font-normal leading-snug text-white/95 sm:leading-tight">
+            {upsellContext === 'trial_ended' ? (
               <>
                 Your Navigator trial has ended. Upgrade to continue tracking live competitor pricing.
               </>
-            )
-          ) : trialRequestSubmitted ? (
-            <>Your trial request has been received. We&apos;ll notify you once access is enabled.</>
-          ) : (
-            <>
-              <span aria-hidden>👉 </span>
-              Want to stay competitive on pricing? Compare your rates with competitors to make smarter pricing
-              decisions
-            </>
-          )}
-        </p>
-        <div className="flex flex-wrap items-center justify-center gap-2 sm:shrink-0">
-          <span className="hidden select-none text-white/80 sm:inline" aria-hidden>
-            —
-          </span>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={
-              upsellContext === 'trial_ended' ? upgradeRequestSubmitted : trialRequestSubmitted
-            }
-            className="inline-flex h-9 w-full items-center justify-center whitespace-nowrap rounded border border-white bg-transparent px-4 text-[14px] font-medium text-white shadow-none hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:border-white/25 disabled:bg-white/[0.04] disabled:text-white/55 disabled:hover:bg-white/[0.04] sm:w-auto"
-            onClick={onStartTrial}
-          >
-            {upsellContext === 'trial_ended'
-              ? upgradeRequestSubmitted
-                ? 'Upgrade Request Sent'
-                : 'Upgrade to full version'
-              : trialRequestSubmitted
-                ? 'Request already sent'
-                : 'Start your free 30-day trial'}
-          </Button>
-          {lockedNavigatorPreviewDismissed && onRestoreNavigatorChartPreview ? (
-            <button
+            ) : (
+              <>
+                <span aria-hidden>👉 </span>
+                Want to stay competitive on pricing? Compare your rates with competitors to make smarter pricing
+                decisions
+              </>
+            )}
+          </p>
+        )}
+        {upsellContext !== 'trial_ended' && trialRequestSubmitted ? null : upsellContext === 'trial_ended' &&
+          upgradeRequestSubmitted ? null : (
+          <div className="flex flex-wrap items-center justify-center gap-2 sm:shrink-0">
+            <span className="hidden select-none text-white/80 sm:inline" aria-hidden>
+              —
+            </span>
+            <Button
               type="button"
-              className="text-[12px] font-medium text-white/90 underline decoration-white/50 underline-offset-2 transition-colors hover:text-white hover:decoration-white sm:text-[13px]"
-              onClick={onRestoreNavigatorChartPreview}
+              size="sm"
+              variant="outline"
+              className="inline-flex h-9 w-full items-center justify-center whitespace-nowrap rounded border border-white bg-transparent px-4 text-[14px] font-medium text-white shadow-none hover:bg-white/10 hover:text-white sm:w-auto"
+              onClick={onStartTrial}
             >
-              Show competitor chart preview
-            </button>
-          ) : null}
-        </div>
+              {upsellContext === 'trial_ended' ? 'Upgrade to full version' : 'Start your free 30-day trial'}
+            </Button>
+            {lockedNavigatorPreviewDismissed && onRestoreNavigatorChartPreview ? (
+              <button
+                type="button"
+                className="text-[12px] font-medium text-white/90 underline decoration-white/50 underline-offset-2 transition-colors hover:text-white hover:decoration-white sm:text-[13px]"
+                onClick={onRestoreNavigatorChartPreview}
+              >
+                Show competitor chart preview
+              </button>
+            ) : null}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -592,6 +611,9 @@ export default function App() {
           includeNavigatorMenuStep={entitlement === 'full'}
           variant={entitlement === 'limited' || entitlement === 'trial_expired' ? 'limited' : 'full'}
           onComplete={handleTourComplete}
+          onRequestSubscription={() => {
+            if (!trialRequestSubmitted) setTrialModalOpen(true);
+          }}
         />
       )}
 

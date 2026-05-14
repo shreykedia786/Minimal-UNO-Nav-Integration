@@ -57,7 +57,7 @@ const NAVIGATOR_MENU_STEP: OnboardingStep = {
   highlightPadding: 10
 };
 
-/** Not subscribed / limited demo: value-led welcome + expand row (preview mode; trial via top banner). */
+/** Not subscribed / limited demo: single welcome with trial CTA + Maybe later (no in-app tour). */
 const LIMITED_ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: 'welcome-intro-limited',
@@ -66,15 +66,6 @@ const LIMITED_ONBOARDING_STEPS: OnboardingStep[] = [
     targetSelector: '',
     position: 'bottom',
     highlightPadding: 0
-  },
-  {
-    id: 'expand-room-limited',
-    title: 'Explore how your pricing compares',
-    description:
-      'Expand a room type, then hover on the blue hotspots.',
-    targetSelector: '[data-tour="room-chevron-icon"]',
-    position: 'right',
-    highlightPadding: 6
   }
 ];
 
@@ -91,6 +82,8 @@ interface OnboardingTourProps {
   variant?: OnboardingTourVariant;
   initialStep?: number;
   includeNavigatorMenuStep?: boolean;
+  /** Limited welcome modal: opens the in-app subscribe / trial-request flow. */
+  onRequestSubscription?: () => void;
 }
 
 const chartStyleTooltipIds = new Set(['competitor-graph']);
@@ -100,7 +93,8 @@ export function OnboardingTour({
   onStepChange,
   variant = 'full',
   initialStep = 0,
-  includeNavigatorMenuStep = false
+  includeNavigatorMenuStep = false,
+  onRequestSubscription
 }: OnboardingTourProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [targetElement, setTargetElement] = useState<HTMLElement | null>(null);
@@ -136,10 +130,9 @@ export function OnboardingTour({
 
   const getTooltipHeight = () => {
     if (isWelcomeStep) {
-      if (step.id === 'welcome-intro-limited') return 540;
+      if (step.id === 'welcome-intro-limited') return 500;
       return 460;
     }
-    if (step.id === 'expand-room-limited') return 280;
     if (step.id === 'competitor-graph') return 340;
     if (step.id === 'drawer-preview') return 280;
     if (step.id === 'navigator-menu') return 330;
@@ -274,7 +267,7 @@ export function OnboardingTour({
       const highlightCenter = currentHighlightRect.top + currentHighlightRect.height / 2;
       const arrowTop = highlightCenter - top;
 
-      const minArrowTop = step.id === 'expand-room-limited' ? 72 : 95;
+      const minArrowTop = 95;
       const maxArrowTop = tooltipHeight - 30;
       const constrainedArrowTop = Math.max(minArrowTop, Math.min(arrowTop, maxArrowTop));
 
@@ -410,9 +403,13 @@ export function OnboardingTour({
               </div>
               <div>
                 <h3 className="text-[15px] font-bold leading-tight mb-1">{step.title}</h3>
-                <p className="text-[11px] text-white/80">
-                  Step {currentStep + 1} of {steps.length}
-                </p>
+                {steps.length > 1 ? (
+                  <p className="text-[11px] text-white/80">
+                    Step {currentStep + 1} of {steps.length}
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-white/80">Stay competitive on price</p>
+                )}
               </div>
             </div>
             <button
@@ -427,25 +424,7 @@ export function OnboardingTour({
         {/* Content */}
         <div className={`px-6 ${isWelcomeStep ? 'py-5 pb-5' : 'py-5'}`}>
           {!isWelcomeStep && step.description ? (
-            <>
-              <p
-                className={`text-[13px] leading-relaxed ${
-                  step.id === 'expand-room-limited' ? 'text-gray-800 font-medium' : 'text-gray-700'
-                }`}
-              >
-                {step.description}
-              </p>
-              {step.id === 'expand-room-limited' ? (
-                <p className="mt-3 text-[13px] leading-relaxed text-gray-700">
-                  See how your pricing compares with competitors.
-                </p>
-              ) : null}
-              {step.id === 'expand-room-limited' ? (
-                <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] leading-snug text-amber-800">
-                  Pricing gaps like these can directly impact your bookings and revenue.
-                </p>
-              ) : null}
-            </>
+            <p className="text-[13px] leading-relaxed text-gray-700">{step.description}</p>
           ) : null}
 
           {/* Welcome — full trial: two cards; limited trial: dedicated preview per step */}
@@ -552,27 +531,54 @@ export function OnboardingTour({
                   <li>Track rate trends</li>
                   <li>View demand forecasts</li>
                   <li>Monitor OTA rankings</li>
-                  <li>And more—all within UNO</li>
                 </ul>
               </div>
             </div>
           )}
 
-          {/* Progress indicators */}
-          <div className="flex items-center gap-1.5 mb-4 mt-5">
-            {steps.map((_, index) => (
-              <div
-                key={index}
-                className="h-1.5 flex-1 rounded-full transition-all duration-300"
-                style={{
-                  backgroundColor: index === currentStep ? '#2753eb' : index < currentStep ? '#2753eb80' : '#e5e7eb'
-                }}
-              />
-            ))}
-          </div>
+          {/* Progress indicators — only when there are multiple steps */}
+          {steps.length > 1 && (
+            <div className="flex items-center gap-1.5 mb-4 mt-5">
+              {steps.map((_, index) => (
+                <div
+                  key={index}
+                  className="h-1.5 flex-1 rounded-full transition-all duration-300"
+                  style={{
+                    backgroundColor: index === currentStep ? '#2753eb' : index < currentStep ? '#2753eb80' : '#e5e7eb'
+                  }}
+                />
+              ))}
+            </div>
+          )}
 
           {/* Actions */}
-          {isNavigatorMenuStep ? (
+          {isLimitedWelcomeStep ? (
+            <div className={steps.length > 1 ? '' : 'mt-5'}>
+              <div className="flex flex-col-reverse items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-3">
+                <button
+                  type="button"
+                  onClick={handleComplete}
+                  className="inline-flex h-10 items-center justify-center rounded-lg px-4 text-[13px] font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-800"
+                >
+                  Maybe later
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleComplete();
+                    onRequestSubscription?.();
+                  }}
+                  className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg bg-[#2753eb] px-5 text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-[#1e3db8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2753eb]/40"
+                >
+                  Start your free 30 days trial
+                  <ArrowRight className="h-3.5 w-3.5" strokeWidth={2.4} aria-hidden />
+                </button>
+              </div>
+              <p className="mt-2.5 text-center text-[10.5px] font-medium leading-snug text-slate-400">
+                Cancel anytime. No commitments.
+              </p>
+            </div>
+          ) : isNavigatorMenuStep ? (
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <button
                 type="button"
@@ -605,7 +611,7 @@ export function OnboardingTour({
                 onClick={handleSkip}
                 className="text-[13px] text-gray-500 hover:text-gray-700 font-medium transition-colors"
               >
-                {isLimitedWelcomeStep ? 'Skip' : 'Skip Tour'}
+                Skip Tour
               </button>
 
               <div className="flex items-center gap-2">
@@ -625,17 +631,8 @@ export function OnboardingTour({
                   onClick={handleNext}
                   className="flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium text-white bg-[#2753eb] hover:bg-[#1e3db8] rounded-lg transition-colors"
                 >
-                  {step.id === 'welcome-intro-limited'
-                    ? 'See how it works'
-                    : step.id === 'expand-room-limited'
-                      ? '👉 Got it'
-                      : isLastStep
-                        ? 'Finish'
-                        : 'Next'}
-                  {!isLastStep && !isLimitedWelcomeStep && step.id !== 'expand-room-limited' && (
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  )}
-                  {step.id === 'welcome-intro-limited' && <ArrowRight className="w-3.5 h-3.5" />}
+                  {isLastStep ? 'Finish' : 'Next'}
+                  {!isLastStep && <ArrowRight className="w-3.5 h-3.5" />}
                 </button>
               </div>
             </div>

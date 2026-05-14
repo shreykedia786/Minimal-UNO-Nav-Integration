@@ -7,7 +7,6 @@ import {
   useRoomCompetitorAnalysis,
   type RoomLevelCompetitorRates
 } from './RoomCompetitorAnalysis';
-import { NavigatorIntelligenceLockedRow } from './NavigatorIntelligenceLockedRow';
 import { demoNavigatorUnavailableFromColumnIndex } from '@/app/lib/navigatorDateCoverage';
 
 interface DateCell {
@@ -666,18 +665,6 @@ export function PropertyInventoryTable({
 
                 {isStandardRoomExpanded && (
                   <>
-                    {!navigatorIntelligenceUnlocked && !lockedNavigatorPreviewDismissed && (
-                      <NavigatorIntelligenceLockedRow
-                        dates={dates}
-                        onRequestTrial={() => onRequestNavigatorTrial?.()}
-                        onDismissPreview={onDismissLockedNavigatorPreview}
-                        trialRequestSubmitted={navigatorTrialRequestSubmitted}
-                        navigatorUpgradeRequestSubmitted={navigatorUpgradeRequestSubmitted}
-                        onNavigatorUpgradeRequestAcknowledged={onNavigatorUpgradeRequestAcknowledged}
-                        navigatorUpsellContext={navigatorUpsellContext}
-                      />
-                    )}
-
                     {/* Club Only Special Rates */}
                     <tr className="border-b border-[#e0e0e0]">
                       <td className="px-4 py-2.5 bg-white border-r-0">
@@ -860,18 +847,6 @@ export function PropertyInventoryTable({
 
                 {isSuiteExpanded && (
                   <>
-                    {!navigatorIntelligenceUnlocked && !lockedNavigatorPreviewDismissed && (
-                      <NavigatorIntelligenceLockedRow
-                        dates={dates}
-                        onRequestTrial={() => onRequestNavigatorTrial?.()}
-                        onDismissPreview={onDismissLockedNavigatorPreview}
-                        trialRequestSubmitted={navigatorTrialRequestSubmitted}
-                        navigatorUpgradeRequestSubmitted={navigatorUpgradeRequestSubmitted}
-                        onNavigatorUpgradeRequestAcknowledged={onNavigatorUpgradeRequestAcknowledged}
-                        navigatorUpsellContext={navigatorUpsellContext}
-                      />
-                    )}
-
                     {/* GDS Only Special Rates */}
                     <tr className="border-b border-[#e0e0e0]">
                       <td className="px-4 py-2.5 bg-white border-r-0">
@@ -1049,18 +1024,6 @@ export function PropertyInventoryTable({
 
                 {isDeluxeRoomExpanded && (
                   <>
-                    {!navigatorIntelligenceUnlocked && !lockedNavigatorPreviewDismissed && (
-                      <NavigatorIntelligenceLockedRow
-                        dates={dates}
-                        onRequestTrial={() => onRequestNavigatorTrial?.()}
-                        onDismissPreview={onDismissLockedNavigatorPreview}
-                        trialRequestSubmitted={navigatorTrialRequestSubmitted}
-                        navigatorUpgradeRequestSubmitted={navigatorUpgradeRequestSubmitted}
-                        onNavigatorUpgradeRequestAcknowledged={onNavigatorUpgradeRequestAcknowledged}
-                        navigatorUpsellContext={navigatorUpsellContext}
-                      />
-                    )}
-
                     {/* Deluxe special rates */}
                     <tr className="border-b border-[#e0e0e0]">
                       <td className="px-4 py-2.5 bg-white border-r-0">
