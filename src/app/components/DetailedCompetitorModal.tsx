@@ -1,6 +1,19 @@
-import { ArrowUpRight, BarChart3, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Info, Sparkles, X } from 'lucide-react';
+import {
+  ArrowUpRight,
+  BarChart3,
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  Info,
+  Loader2,
+  Sparkles,
+  X
+} from 'lucide-react';
 import {
   useCallback,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -1387,6 +1400,57 @@ function initialDrawerOffsetStraddlingNavigatorLimit(
   return Math.min(Math.max(minO, 0), maxO);
 }
 
+/** Placeholder rows while compset matrix “loads” after the user expands competitor detail. */
+function CompetitorRatesTableSkeleton({
+  dateColumns,
+  rowCount,
+  minWidthPx
+}: {
+  dateColumns: number;
+  rowCount: number;
+  minWidthPx: number;
+}) {
+  const rows = Math.max(1, rowCount);
+  return (
+    <div
+      className="flex min-h-0 flex-1 flex-col overflow-y-auto border-t border-[#e8eaed] bg-white"
+      aria-busy="true"
+      aria-live="polite"
+      aria-label="Loading your data"
+    >
+      <div className="flex items-center justify-center gap-2 border-b border-slate-100/90 bg-white px-4 py-3">
+        <Loader2 className="h-4 w-4 shrink-0 animate-spin text-[#2753eb]" strokeWidth={2.25} aria-hidden />
+        <span className="text-[12.5px] font-medium tracking-tight text-slate-500">Loading your data</span>
+      </div>
+      <table
+        className="w-full border-collapse"
+        style={{ tableLayout: 'fixed', minWidth: minWidthPx }}
+      >
+        <colgroup>
+          <col style={{ width: '180px' }} />
+          {Array.from({ length: dateColumns }, (_, i) => (
+            <col key={i} style={{ width: '110px' }} />
+          ))}
+        </colgroup>
+        <tbody>
+          {Array.from({ length: rows }, (_, ri) => (
+            <tr key={ri} className="border-b border-[#e0e0e0]">
+              <td className="sticky left-0 z-10 border-r border-[#e0e0e0] bg-white px-4 py-3">
+                <span className="block h-3.5 w-[72%] max-w-[150px] animate-pulse rounded-md bg-slate-200/90" />
+              </td>
+              {Array.from({ length: dateColumns }, (_, di) => (
+                <td key={di} className="border-r border-[#e0e0e0] px-2 py-3 text-center align-middle">
+                  <span className="mx-auto block h-4 w-14 max-w-[90%] animate-pulse rounded-md bg-slate-100" />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export function DetailedCompetitorModal({
   dates,
   rates,
@@ -1417,6 +1481,19 @@ export function DetailedCompetitorModal({
    * always-on. The avg row depends on the same data, so they reveal together.
    */
   const [showCompetitorRates, setShowCompetitorRates] = useState(false);
+  const [competitorRatesLoading, setCompetitorRatesLoading] = useState(false);
+
+  const visibleCompetitorRowCount = useMemo(
+    () => competitors.reduce((acc, _, i) => acc + (compsetSelection[i] ? 1 : 0), 0),
+    [compsetSelection]
+  );
+
+  useEffect(() => {
+    if (!showCompetitorRates || !competitorRatesLoading) return;
+    const delayMs = 2000 + Math.floor(Math.random() * 1001); // 2000–3000 ms
+    const id = window.setTimeout(() => setCompetitorRatesLoading(false), delayMs);
+    return () => window.clearTimeout(id);
+  }, [showCompetitorRates, competitorRatesLoading]);
 
   const inclusionPlans = inclusionPlanNames?.length ? inclusionPlanNames : DEFAULT_INCLUSION_PLAN_NAMES;
 
@@ -1432,6 +1509,8 @@ export function DetailedCompetitorModal({
   );
 
   const handleClose = () => {
+    setShowCompetitorRates(false);
+    setCompetitorRatesLoading(false);
     setIsClosing(true);
     setTimeout(() => {
       onClose();
@@ -1888,7 +1967,10 @@ export function DetailedCompetitorModal({
                             <span>Avg. Compset Rates</span>
                             <button
                               type="button"
-                              onClick={() => setShowCompetitorRates(false)}
+                              onClick={() => {
+                                setShowCompetitorRates(false);
+                                setCompetitorRatesLoading(false);
+                              }}
                               className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-slate-600 transition-colors hover:border-slate-400 hover:text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2753eb]/40"
                               aria-label="Hide competitor rates"
                             >
@@ -1912,7 +1994,9 @@ export function DetailedCompetitorModal({
                               key={dateIdx}
                               className="border-r border-[#d4d8de] bg-[#e2e5ea] px-3 py-3 text-center text-[14px] font-semibold"
                             >
-                              {avgRate === null ? (
+                              {competitorRatesLoading ? (
+                                <span className="mx-auto inline-block h-4 w-14 animate-pulse rounded-md bg-slate-300/80" />
+                              ) : avgRate === null ? (
                                 navOut ? (
                                   <NavigatorOutsideCoverageTooltip
                                     title="Avg. Compset Rates"
@@ -1945,6 +2029,13 @@ export function DetailedCompetitorModal({
                 </div>
 
                 {showCompetitorRates ? (
+                  competitorRatesLoading ? (
+                    <CompetitorRatesTableSkeleton
+                      dateColumns={visibleDates.length}
+                      rowCount={visibleCompetitorRowCount}
+                      minWidthPx={competitorTableMinWidthPx}
+                    />
+                  ) : (
                 <div className="min-h-0 flex-1 overflow-y-auto border-t border-[#e8eaed] bg-white">
                   <table
                     className="w-full border-collapse"
@@ -2026,6 +2117,7 @@ export function DetailedCompetitorModal({
                     </tbody>
                   </table>
                 </div>
+                  )
                 ) : (
                   /**
                    * Default state: per-competitor table + avg row hidden behind
@@ -2048,7 +2140,10 @@ export function DetailedCompetitorModal({
                     </div>
                     <button
                       type="button"
-                      onClick={() => setShowCompetitorRates(true)}
+                      onClick={() => {
+                        setShowCompetitorRates(true);
+                        setCompetitorRatesLoading(true);
+                      }}
                       className="mt-1 inline-flex items-center gap-2 rounded-lg bg-[#2753eb] px-4 py-2.5 text-[13px] font-semibold text-white shadow-[0_4px_12px_-2px_rgba(39,83,235,0.45)] transition-all hover:bg-[#1d3fb8] hover:shadow-[0_6px_16px_-2px_rgba(39,83,235,0.55)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2753eb]/40 focus-visible:ring-offset-2"
                     >
                       <BarChart3 className="h-4 w-4" strokeWidth={2.5} aria-hidden />
