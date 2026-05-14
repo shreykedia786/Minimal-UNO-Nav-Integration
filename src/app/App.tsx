@@ -136,27 +136,31 @@ function NavigatorLimitedBanner({
         }`}
       >
         {upsellContext !== 'trial_ended' && trialRequestSubmitted ? (
-          <p className="m-0 mx-auto w-full max-w-[920px] text-center text-[13px] font-normal leading-snug text-white/95 sm:text-center sm:text-[14px] sm:leading-tight">
-            Thanks for your request! Your 30-day trial will be activated shortly—we&apos;ll notify you once it&apos;s
-            ready. For any queries, contact{' '}
-            <a
-              href="mailto:help@rategain.com"
-              className="font-medium text-white underline decoration-white/50 underline-offset-2 transition-colors hover:decoration-white"
-            >
-              help@rategain.com
-            </a>
-          </p>
+          <div className="flex w-full max-w-[min(100%,calc(100vw-5rem))] justify-center overflow-x-auto overflow-y-hidden [scrollbar-width:thin]">
+            <p className="m-0 shrink-0 whitespace-nowrap px-1 text-center text-[12px] font-normal leading-snug text-white/95 sm:text-[13px] sm:leading-tight md:text-[14px]">
+              Thanks for your request! Your 30-day trial will be activated shortly—we&apos;ll notify you once it&apos;s
+              ready. For any queries, contact{' '}
+              <a
+                href="mailto:unonavigator@rategain.com"
+                className="font-medium text-white underline decoration-white/50 underline-offset-2 transition-colors hover:decoration-white"
+              >
+                unonavigator@rategain.com
+              </a>
+            </p>
+          </div>
         ) : upsellContext === 'trial_ended' && upgradeRequestSubmitted ? (
-          <p className="m-0 mx-auto w-full max-w-[920px] text-center text-[13px] font-normal leading-snug text-white/95 sm:text-center sm:text-[14px] sm:leading-tight lg:whitespace-nowrap">
-            Thanks for your upgrade request! Our team will contact you shortly to take this forward. For any
-            questions, reach out to{' '}
-            <a
-              href="mailto:help@rategain.com"
-              className="font-medium text-white underline decoration-white/50 underline-offset-2 transition-colors hover:decoration-white"
-            >
-              help@rategain.com
-            </a>
-          </p>
+          <div className="flex w-full max-w-[min(100%,calc(100vw-5rem))] justify-center overflow-x-auto overflow-y-hidden [scrollbar-width:thin]">
+            <p className="m-0 shrink-0 whitespace-nowrap px-1 text-center text-[12px] font-normal leading-snug text-white/95 sm:text-[13px] sm:leading-tight md:text-[14px]">
+              Thanks for your upgrade request! Our team will contact you shortly to take this forward. For any
+              questions, reach out to{' '}
+              <a
+                href="mailto:unonavigator@rategain.com"
+                className="font-medium text-white underline decoration-white/50 underline-offset-2 transition-colors hover:decoration-white"
+              >
+                unonavigator@rategain.com
+              </a>
+            </p>
+          </div>
         ) : (
           <p className="max-w-[920px] font-normal leading-snug text-white/95 sm:leading-tight">
             {upsellContext === 'trial_ended' ? (
