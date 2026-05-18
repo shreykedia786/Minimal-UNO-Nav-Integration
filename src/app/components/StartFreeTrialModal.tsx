@@ -17,6 +17,9 @@ const NAVIGATOR_LOGO_BRAND_FILTER =
 
 const TRIAL_THANKS_AUTO_CLOSE_MS = 3600;
 
+const ERR_PROPERTY_URL_EMPTY = 'Please enter a website URL for your property.';
+const ERR_PROPERTY_URL_BAD =
+  'Please enter a valid URL for your property (for example https://www.booking.com/hotel/...).';
 const ERR_C1_NAME = 'Please enter at least one competitor property.';
 const ERR_C1_URL_EMPTY = 'Please enter a website URL for competitor 1.';
 const ERR_C1_URL_BAD =
@@ -53,6 +56,7 @@ export function StartFreeTrialModal({
   defaultBrand = 'Mosaic Hotel Noida',
   defaultProperty = 'Mosaic Hotel Noida'
 }: StartFreeTrialModalProps) {
+  const [propertyUrl, setPropertyUrl] = useState('');
   const [competitor1, setCompetitor1] = useState('');
   const [competitor2, setCompetitor2] = useState('');
   const [competitor3, setCompetitor3] = useState('');
@@ -65,6 +69,7 @@ export function StartFreeTrialModal({
   const prevThanksOpenRef = useRef(false);
 
   const resetForm = useCallback(() => {
+    setPropertyUrl('');
     setCompetitor1('');
     setCompetitor2('');
     setCompetitor3('');
@@ -96,6 +101,7 @@ export function StartFreeTrialModal({
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
+    const propertyUrlTrimmed = propertyUrl.trim();
     const c1 = competitor1.trim();
     const c1u = competitor1Url.trim();
     const c2 = competitor2.trim();
@@ -103,6 +109,14 @@ export function StartFreeTrialModal({
     const c3 = competitor3.trim();
     const c3u = competitor3Url.trim();
 
+    if (!propertyUrlTrimmed) {
+      setError(ERR_PROPERTY_URL_EMPTY);
+      return;
+    }
+    if (!isValidHttpUrl(propertyUrlTrimmed)) {
+      setError(ERR_PROPERTY_URL_BAD);
+      return;
+    }
     if (!c1) {
       setError(ERR_C1_NAME);
       return;
@@ -198,6 +212,27 @@ export function StartFreeTrialModal({
                     defaultValue={defaultProperty}
                     className="h-10 cursor-not-allowed border-[#e5e7eb] bg-[#f3f4f6] text-[13px] text-[#6b7280]"
                   />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="trial-property-url" className="text-[13px] font-medium text-[#374151]">
+                    Property URL<span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="trial-property-url"
+                    type="text"
+                    inputMode="url"
+                    autoComplete="url"
+                    value={propertyUrl}
+                    onChange={(e) => setPropertyUrl(e.target.value)}
+                    placeholder="https://"
+                    required
+                    className="h-10 border-[#e5e7eb] bg-white text-[13px] placeholder:text-[#9ca3af]"
+                    aria-invalid={error === ERR_PROPERTY_URL_EMPTY || error === ERR_PROPERTY_URL_BAD}
+                    aria-describedby={error ? 'trial-comp-error' : undefined}
+                  />
+                  <p className="text-[12px] leading-relaxed text-[#9ca3af]">
+                    Public listing or website URL for your property so we can match the correct listing.
+                  </p>
                 </div>
 
                 <div className="border-t border-[#f1f5f9] pt-4">
