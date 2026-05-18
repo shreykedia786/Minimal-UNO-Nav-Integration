@@ -9,7 +9,7 @@ import {
   DialogTitle
 } from '@/app/components/ui/dialog';
 
-const SUPPORT_EMAIL = 'help@rategain.com';
+const SUPPORT_EMAIL = 'unonavigator@rategain.com';
 
 export type NavigatorUpgradeRequestModalProps = {
   open: boolean;
